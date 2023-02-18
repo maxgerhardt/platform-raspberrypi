@@ -35,7 +35,7 @@
       "type": "toolchain", 
       "optional": true,
       "owner": "earlephilhower",
-      "version": "5.100300.221223"
+      "version": "5.100300.230216"
     },
     "framework-arduino-mbed": {
       "type": "framework",
