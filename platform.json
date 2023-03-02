@@ -47,7 +47,7 @@
       "type": "framework",
       "optional": true,
       "owner": "earlephilhower",
-      "version": "https://github.com/minipadKB/arduino-pico"
+      "version": "https://github.com/minipadKB/arduino-pico.git"
     },
     "tool-rp2040tools": {
       "type": "uploader",
