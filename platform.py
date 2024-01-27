@@ -34,9 +34,9 @@ class RaspberrypiPlatform(PlatformBase):
         "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/aarch64-linux-gnu.arm-none-eabi-d04e724.240125.tar.gz",
         "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/arm-linux-gnueabihf.arm-none-eabi-d04e724.240125.tar.gz",
         "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/arm-linux-gnueabihf.arm-none-eabi-d04e724.240125.tar.gz",
-        # Mac (Intel and ARM the same toolchain for now because of a bug)
+        # Mac (Intel and ARM use different toolchain)
         "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/x86_64-apple-darwin20.4.arm-none-eabi-d04e724.240125.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.1.0-a/x86_64-apple-darwin15.arm-none-eabi-d3d2e6b.230911.tar.gz"
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/aarch64-apple-darwin20.4.arm-none-eabi-d04e724.240127.tar.gz"
     }
 
     earle_openocd = {
@@ -50,9 +50,9 @@ class RaspberrypiPlatform(PlatformBase):
         "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/aarch64-linux-gnu.openocd-4d87f6dca.240125.tar.gz",
         "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/arm-linux-gnueabihf.openocd-4d87f6dca.240125.tar.gz",
         "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/arm-linux-gnueabihf.openocd-4d87f6dca.240125.tar.gz",
-        # Mac (Intel and ARM use same tool build)
+        # Mac (Intel and ARM use different tool build)
         "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/x86_64-apple-darwin20.4.openocd-4d87f6dca.240125.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.1.0-a/x86_64-apple-darwin15.openocd-4d87f6dca.230911.tar.gz"
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/2.2.0/aarch64-apple-darwin20.4.openocd-4d87f6dca.240127.tar.gz"
     }
 
     def configure_default_packages(self, variables, targets):
