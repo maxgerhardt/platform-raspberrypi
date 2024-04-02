@@ -537,7 +537,7 @@ elif upload_protocol == "custom":
 if not upload_actions:
     sys.stderr.write("Warning! Unknown upload protocol %s\n" % upload_protocol)
 
-AlwaysBuild(env.Alias("upload", upload_source, upload_actions))
+AlwaysBuild(env.AddPlatformTarget("upload", upload_source, upload_actions, "Default Upload"))
 env.AddPlatformTarget("uploadfs", target_firm, upload_actions, "Upload Filesystem Image")
 #
 # Default targets
