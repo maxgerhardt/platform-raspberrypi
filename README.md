@@ -1,8 +1,10 @@
-# Raspberry Pi RP2040: development platform for [PlatformIO](https://platformio.org)
+# Raspberry Pi RP2040 and RP2350: development platform for [PlatformIO](https://platformio.org)
 
 [![Build Status](https://github.com/platformio/platform-raspberrypi/workflows/Examples/badge.svg)](https://github.com/platformio/platform-raspberrypi/actions)
 
-RP2040 is a low-cost, high-performance microcontroller device with a large on-chip memory, symmetric dual-core processor complex, deterministic bus fabric, and rich peripheral set augmented with a unique Programmable I/O (PIO) subsystem, it provides professional users with unrivalled power and flexibility.
+RP2040 is a low-cost, high-performance microcontroller device with a large on-chip memory, symmetric dual-core processor complex, deterministic bus fabric, and rich peripheral set augmented with a unique Programmable I/O (PIO) subsystem, it provides professional users with unrivalled power and flexibility. RP2040 was initially released as part of the Raspberry Pi Pico board.
+
+RP2350 microcontroller is the successor to RP2040, and it contains two 32-bit ARM Cortex-M33 cores and two Hazard3 RISC-V cores. RP2350 was initially released as part of the Raspberry Pi Pico 2 board.
 
 * [Home](https://registry.platformio.org/platforms/platformio/raspberrypi) (home page in the PlatformIO Registry)
 * [Documentation](https://docs.platformio.org/page/platforms/raspberrypi.html) (advanced usage, packages, boards, frameworks, etc.)
