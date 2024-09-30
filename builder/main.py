@@ -372,8 +372,12 @@ def TryResetPico(target, source, env):
         if upload_options.get("use_1200bps_touch", False):
             env.TouchSerialPort(last_port, 1200)
             time.sleep(2.0)
+try:
+    from platformio.public import list_logical_devices
+except ImportError:
+    sys.stderr.write("Warning! Update platformio-core >= 6.1.6")
+    from platformio.device.list.util import list_logical_devices
 
-from platformio.device.list.util import list_logical_devices
 from platformio.device.finder import is_pattern_port
 from fnmatch import fnmatch
 
