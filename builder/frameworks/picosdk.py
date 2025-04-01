@@ -56,8 +56,8 @@ env.Append(
     #CFLAGS=sorted(list(cflags - ccflags)),
     #CCFLAGS=sorted(list(ccflags)),
     CPPDEFINES=[
-        # BUG: defining RP2040 in any way will force compilation for 2040 only.
-        # FIX: add RP2040 only if board requested was 2040
+        # BUG: defining PICO_RP2040 in any way will force compilation for 2040 only.
+        # FIX: add RP2350 only if board requested was 2350
         ("PICO_RP2350" if board.get('build.mcu') == "rp2350" else "PICO_RP2040", 1),
         ("PICO_RISCV", 0),
         ("PICO_ARM", 1),
@@ -152,7 +152,7 @@ env.Append(
         # CMSIS only for ARM
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Core", "Include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Device", "RP2350", "Include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Device", mcu.upper(), "Include"),
 
         join(FRAMEWORK_DIR, "src", "rp2_common", "tinyusb", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_usb", "include"),
@@ -179,7 +179,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdlib", "include"),
 
-        join(FRAMEWORK_DIR, "src", "rp2350", "boot_stage2", "asminclude"),
+        join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "asminclude"),
     ],
     #CXXFLAGS=sorted(list(cxxflags - ccflags)),
     LIBPATH=[
