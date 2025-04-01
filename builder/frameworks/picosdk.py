@@ -61,7 +61,7 @@ env.Append(
         ("PICO_RP2350" if board.get('build.mcu') == "rp2350" else "PICO_RP2040", 1),
         ("PICO_RISCV", 0),
         ("PICO_ARM", 1),
-        ("PICO_CMSIS_DEVICE", mcu.upper()),
+        ("PICO_CMSIS_DEVICE", "\"%s\"" % mcu.upper()),
         ("PICO_DEFAULT_FLASH_SIZE_BYTES", 2 * 1024 * 1024),
         # default SDK defines for on-hardware build
         ("PICO_ON_DEVICE", "1"),
@@ -235,9 +235,9 @@ if not "PIO_USE_DEFAULT_PAGE_SIZE" in cpp_defines:
     env.Append(LINKFLAGS=["-Wl,-z,max-page-size=4096"])
 
 timeout = 0
-# if "PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS" in cpp_defines:
-#     timeout = cpp_defines["PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS"]
-# flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
+if "PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS" in cpp_defines:
+    timeout = cpp_defines["PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS"]
+flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
 
 def build_double_library():
     pass
