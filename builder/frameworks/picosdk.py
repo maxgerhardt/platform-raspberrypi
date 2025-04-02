@@ -199,7 +199,6 @@ env.Append(
 )
 
 cpp_defines = env.Flatten(env.get("CPPDEFINES", []))
-print("CPPDEFINES: ", cpp_defines)
 
 flags = []
 # configure default but overridable defines
