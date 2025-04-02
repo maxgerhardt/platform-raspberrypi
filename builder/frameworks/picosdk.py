@@ -1,4 +1,4 @@
-from os.path import isdir, join
+from os.path import isdir, isfile, join
 from os import makedirs
 from pathlib import Path
 import sys
@@ -13,9 +13,12 @@ assert isdir(FRAMEWORK_DIR)
 
 mcu = "rp2350" if board.get('build.mcu') == "rp2350" else "rp2040"
 rp2_variant_dir = join(FRAMEWORK_DIR, "src", mcu)
-# todo: try to better guess the board header name based from the board definition name
-# instead of requiring them to explicitly include it
-rp2_board_header = board.get("build.picosdk.board_header", "pico.h")
+header = "%s.h" % board.get("build.variant")
+# try to find the board header in the common directory
+if isfile(join(FRAMEWORK_DIR, "src", "boards", "include", "boards", header)):
+    rp2_board_header = board.get("build.picosdk.board_header", header)
+else:
+    rp2_board_header = board.get("build.picosdk.board_header", "pico.h")
 
 # include basic settings
 env.SConscript("_bare.py")
@@ -32,10 +35,8 @@ def gen_config_autogen(target_base_dir, board_hdr):
         env.Exit(-1)
     autogen_content_paths = [
         join(FRAMEWORK_DIR, "src", "boards", "include", "boards", board_hdr),
-    ]
-    if mcu == "rp2040":
-        # only for ARM based RP2040
         join(FRAMEWORK_DIR, "src" , "rp2_common", "cmsis", "include", "cmsis", "rename_exceptions.h")
+    ]
     # read content
     autogen_content = ""
     for file in autogen_content_paths:
@@ -67,7 +68,7 @@ env.Append(
         ("PICO_ON_DEVICE", "1"),
         ("PICO_NO_HARDWARE", "0"),
         ("PICO_BUILD", "1"),
-        ("LIB_CMSIS_CORE", 1),
+        ("LIB_CMSIS_CORE", 1)
     ],
     CPPPATH=[
         # for version.h, one-time generated
@@ -100,8 +101,9 @@ env.Append(
         join(rp2_variant_dir, "boot_stage2", "include"),
 
         # common for rp2040, rp2350
-        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_base", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "boot_bootrom_headers", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_adc", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_base", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_boot_lock", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_clocks", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_divider", "include"),
@@ -118,8 +120,8 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_resets", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_spi", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_sync", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_sync_spin_lock", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_sync", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_ticks", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_timer", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_uart", "include"),
@@ -127,28 +129,28 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_watchdog", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_xosc", "include"),
 
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_bootrom", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_compiler", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_sections", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_panic", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_aon_timer", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_bootsel_via_double_reset", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_multicore", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_unique_id", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_atomic", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_bit_ops", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_bootrom", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_bootsel_via_double_reset", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_divider", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_double", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_int64_ops", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_flash", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_float", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mem_ops", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_int64_ops", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_malloc", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mem_ops", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_multicore", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_compiler", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_panic", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_sections", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_printf", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_rand", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_semihosting", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_uart", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_unique_id", "include"),
         # CMSIS only for ARM
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Core", "Include"),
@@ -197,6 +199,7 @@ env.Append(
 )
 
 cpp_defines = env.Flatten(env.get("CPPDEFINES", []))
+print("CPPDEFINES: ", cpp_defines)
 
 flags = []
 # configure default but overridable defines
@@ -208,6 +211,7 @@ if not "PICO_DEFAULT_BOOT_STAGE2" in cpp_defines:
 if not "PIO_NO_STDIO_UART" in cpp_defines:
     flags.append(("PICO_STDIO_UART", 1))
     # SDK C code specifies it as LIB_... so do that too
+    flags.append(("LIB_PICO_STDIO", 1))
     flags.append(("LIB_PICO_STDIO_UART", 1))
 if not "PIO_NO_MULTICORE" in cpp_defines:
     flags.append(("PICO_MULTICORE_ENABLED", 1))
@@ -324,23 +328,24 @@ env.Depends("$BUILD_DIR/${PROGNAME}.elf", gen_boot2_cmd)
 
 # default compontents
 default_common_rp2_components = [
-    ("pico_runtime_init", "+<*>"),
     ("hardware_adc", "+<*>"),
     ("hardware_boot_lock", "+<*>"),
     ("hardware_clocks", "+<*>"),
-    ("hardware_xosc", "+<*>"),
-    ("hardware_pll", "+<*>"),
-    ("hardware_ticks", "+<*>"),
-    ("hardware_uart", "+<*>"),
-    ("pico_clib_interface", "-<*> +<newlib_interface.c>"),
     ("hardware_gpio", "+<*>"),
-    ("hardware_timer", "+<*>"),
     ("hardware_irq", "+<*>"),
+    ("hardware_pll", "+<*>"),
     ("hardware_sync", "+<*>"),
     ("hardware_sync_spin_lock", "+<*>"),
+    ("hardware_ticks", "+<*>"),
+    ("hardware_timer", "+<*>"),
+    ("hardware_uart", "+<*>"),
+    ("hardware_xosc", "+<*>"),
+    ("pico_bootrom", "+<*>"),
+    ("pico_clib_interface", "-<*> +<newlib_interface.c>"),
     ("pico_platform_panic", "+<*>"),
     ("pico_runtime", "+<*>"),
-    ("pico_bootrom", "+<*>"),
+    ("pico_runtime_init", "+<*>"),
+    ("pico_stdlib", "+<*>"),
     ("pico_stdio", "+<*>"),
     ("pico_stdio_uart", "+<*>"),
 ]
