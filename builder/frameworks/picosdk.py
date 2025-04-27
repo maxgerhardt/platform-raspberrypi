@@ -338,6 +338,7 @@ default_common_rp2_components = [
     ("hardware_spi", "+<*>"),
     ("hardware_dma", "+<*>"),
     ("hardware_i2c", "+<*>"),
+    ("hardware_pio", "+<*>"),
     ("hardware_ticks", "+<*>"),
     ("hardware_timer", "+<*>"),
     ("hardware_uart", "+<*>"),
