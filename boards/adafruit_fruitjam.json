@@ -2,40 +2,41 @@
     "build": {
         "arduino": {
             "earlephilhower": {
-                "boot2_source": "boot2_w25q080_2_padded_checksum.S",
-                "usb_vid": "0x15BA",
-                "usb_pid": "0x0026"
+                "boot2_source": "none.S",
+                "usb_vid": "0x239A",
+                "usb_pid": "0x816B"
             }
         },
         "core": "earlephilhower",
-        "cpu": "cortex-m0plus",
-        "extra_flags": "-DARDUINO_OLIMEX_RP2040_PICO30_2MB -DARDUINO_ARCH_RP2040 -DUSBD_MAX_POWER_MA=250 ",
-        "f_cpu": "133000000L",
+        "cpu": "cortex-m33",
+        "extra_flags": "-DARDUINO_ADAFRUIT_FRUITJAM_RP2350 -DARDUINO_ARCH_RP2040 -DUSBD_MAX_POWER_MA=250 ",
+        "f_cpu": "150000000L",
         "hwids": [
             [
                 "0x2E8A",
                 "0x00C0"
             ],
             [
-                "0x15BA",
-                "0x0026"
+                "0x239A",
+                "0x816B"
             ]
         ],
-        "mcu": "rp2040",
-        "variant": "olimex_rp2040pico30_2mb"
+        "mcu": "rp2350",
+        "variant": "adafruit_fruitjam"
     },
     "debug": {
-        "jlink_device": "RP2040_M0_0",
-        "openocd_target": "rp2040.cfg",
-        "svd_path": "rp2040.svd"
+        "jlink_device": "RP2350_0",
+        "openocd_target": "rp2350.cfg",
+        "svd_path": "rp2350.svd"
     },
     "frameworks": [
-        "arduino"
+        "arduino",
+        "picosdk"
     ],
-    "name": "RP2040-Pico30 2MB",
+    "name": "Fruit Jam RP2350",
     "upload": {
-        "maximum_ram_size": 262144,
-        "maximum_size": 2097152,
+        "maximum_ram_size": 524288,
+        "maximum_size": 16777216,
         "require_upload_port": true,
         "native_usb": true,
         "use_1200bps_touch": true,
@@ -48,8 +49,9 @@
             "raspberrypi-swd",
             "picotool",
             "picoprobe"
-        ]
+        ],
+        "psram_length": 8388608
     },
     "url": "https://www.raspberrypi.org/products/raspberry-pi-pico/",
-    "vendor": "Olimex"
+    "vendor": "Adafruit"
 }
