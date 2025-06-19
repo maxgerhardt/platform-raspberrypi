@@ -237,9 +237,14 @@ class RaspberrypiPlatform(PlatformBase):
         # (set dynamically by board_build.mcu = rp2350-riscv in the platformio.ini of the project)
         # Somehow that can not yet be determined when we're inside _add_default_debug_tools(),
         # So we have to patch this up afterwards.
+        # Same for JLink "-device" argument.
         if is_riscv:
             try:
                 server_arguments[server_arguments.index("target/rp2350.cfg")] = "target/rp2350-riscv.cfg"
+            except:
+                pass
+            try:
+                server_arguments[server_arguments.index("RP2350_M33_0")] = "RP2350_RV32_0"
             except:
                 pass
         if "interface/cmsis-dap.cfg" in server_arguments or "interface/picoprobe.cfg" in server_arguments:

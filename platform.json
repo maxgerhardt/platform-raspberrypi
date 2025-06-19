@@ -75,7 +75,7 @@
       "type": "uploader",
       "optional": true,
       "owner": "platformio",
-      "version": "^1.78811.0"
+      "version": "^1.81206.0"
     },
     "tool-mklittlefs-rp2040-earlephilhower": {
       "type": "uploader",
