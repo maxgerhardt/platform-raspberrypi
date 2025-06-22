@@ -25,66 +25,66 @@ class RaspberrypiPlatform(PlatformBase):
 
     earle_toolchain_arm = {
         # Windows
-        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-w64-mingw32.arm-none-eabi-8ec9d6f.240929.zip",
-        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-w64-mingw32.arm-none-eabi-8ec9d6f.240929.zip",
+        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.arm-none-eabi-1aec55e.250530.zip",
+        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-w64-mingw32.arm-none-eabi-1aec55e.250530.zip",
         # No Windows ARM64 or ARM32 builds.
         # Linux
-        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-linux-gnu.arm-none-eabi-8ec9d6f.240929.tar.gz",
-        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-linux-gnu.arm-none-eabi-8ec9d6f.240929.tar.gz",
-        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-linux-gnu.arm-none-eabi-8ec9d6f.240929.tar.gz",
-        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.arm-none-eabi-8ec9d6f.240929.tar.gz",
-        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.arm-none-eabi-8ec9d6f.240929.tar.gz",
+        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-linux-gnu.arm-none-eabi-1aec55e.250530.tar.gz",
+        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-linux-gnu.arm-none-eabi-1aec55e.250530.tar.gz",
+        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-linux-gnu.arm-none-eabi-1aec55e.250530.tar.gz",
+        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.arm-none-eabi-1aec55e.250530.tar.gz",
+        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.arm-none-eabi-1aec55e.250530.tar.gz",
         # Mac (Intel and ARM are separate)
-        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-apple-darwin20.4.arm-none-eabi-8ec9d6f.240929.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-apple-darwin20.4.arm-none-eabi-8ec9d6f.240929.tar.gz"
+        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-apple-darwin20.4.arm-none-eabi-1aec55e.250530.tar.gz",
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.arm-none-eabi-1aec55e.250530.tar.gz"
     }
 
     earle_toolchain_riscv = {
         # Windows
-        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-w64-mingw32.riscv32-unknown-elf-8ec9d6f.240929.zip",
-        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-w64-mingw32.riscv32-unknown-elf-8ec9d6f.240929.zip",
+        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.riscv32-unknown-elf-1aec55e.250530.zip",
+        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-w64-mingw32.riscv32-unknown-elf-1aec55e.250530.zip",
         # No Windows ARM64 or ARM32 builds.
         # Linux
-        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-linux-gnu.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
-        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-linux-gnu.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
-        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-linux-gnu.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
-        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
-        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
+        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-linux-gnu.riscv32-unknown-elf-1aec55e.250530.tar.gz",
+        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-linux-gnu.riscv32-unknown-elf-1aec55e.250530.tar.gz",
+        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-linux-gnu.riscv32-unknown-elf-1aec55e.250530.tar.gz",
+        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.riscv32-unknown-elf-1aec55e.250530.tar.gz",
+        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.riscv32-unknown-elf-1aec55e.250530.tar.gz",
         # Mac (Intel and ARM are separate)
-        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-apple-darwin20.4.riscv32-unknown-elf-8ec9d6f.240929.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-apple-darwin20.4.riscv32-unknown-elf-8ec9d6f.240929.tar.gz"
+        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-apple-darwin20.4.riscv32-unknown-elf-1aec55e.250530.tar.gz",
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.riscv32-unknown-elf-1aec55e.250530.tar.gz"
     }
 
     earle_openocd = {
         # Windows
-        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-w64-mingw32.openocd-ebec9504d.240929.zip",
-        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-w64-mingw32.openocd-ebec9504d.240929.zip",
+        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.openocd-ebec9504d.250530.zip",
+        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-w64-mingw32.openocd-ebec9504d.250530.zip",
         # No Windows ARM64 or ARM32 builds.
         # Linux
-        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-linux-gnu.openocd-ebec9504d.240929.tar.gz",
-        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-linux-gnu.openocd-ebec9504d.240929.tar.gz",
-        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-linux-gnu.openocd-ebec9504d.240929.tar.gz",
-        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.openocd-ebec9504d.240929.tar.gz",
-        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.openocd-ebec9504d.240929.tar.gz",
+        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-linux-gnu.openocd-ebec9504d.250530.tar.gz",
+        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-linux-gnu.openocd-ebec9504d.250530.tar.gz",
+        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-linux-gnu.openocd-ebec9504d.250530.tar.gz",
+        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.openocd-ebec9504d.250530.tar.gz",
+        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.openocd-ebec9504d.250530.tar.gz",
         # Mac (Intel and ARM are separate)
-        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-apple-darwin20.4.openocd-ebec9504d.240929.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-apple-darwin20.4.openocd-ebec9504d.240929.tar.gz"
+        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-apple-darwin20.4.openocd-ebec9504d.250530.tar.gz",
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.openocd-ebec9504d.250530.tar.gz"
     }
 
     earle_picotool = {
         # Windows
-        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-w64-mingw32.picotool-8a9af99.240929.zip",
-        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-w64-mingw32.picotool-8a9af99.240929.zip",
+        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.picotool-c56c005.250530.zip",
+        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-w64-mingw32.picotool-c56c005.250530.zip",
         # No Windows ARM64 or ARM32 builds.
         # Linux
-        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-linux-gnu.picotool-8a9af99.240929.tar.gz",
-        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/i686-linux-gnu.picotool-8a9af99.240929.tar.gz",
-        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-linux-gnu.picotool-8a9af99.240929.tar.gz",
-        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.picotool-8a9af99.240929.tar.gz",
-        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/arm-linux-gnueabihf.picotool-8a9af99.240929.tar.gz",
+        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-linux-gnu.picotool-c56c005.250530.tar.gz",
+        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-linux-gnu.picotool-c56c005.250530.tar.gz",
+        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-linux-gnu.picotool-c56c005.250530.tar.gz",
+        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.picotool-c56c005.250530.tar.gz",
+        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.picotool-c56c005.250530.tar.gz",
         # Mac (Intel and ARM are separate)
-        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/x86_64-apple-darwin20.4.picotool-8a9af99.240929.tar.gz",
-        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.0.1/aarch64-apple-darwin20.4.picotool-8a9af99.240929.tar.gz"
+        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-apple-darwin20.4.picotool-c56c005.250530.tar.gz",
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.picotool-c56c005.250530.tar.gz"
     }
 
     def configure_default_packages(self, variables, targets):
