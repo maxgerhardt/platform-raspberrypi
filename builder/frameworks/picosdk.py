@@ -12,6 +12,7 @@ FRAMEWORK_DIR = platform.get_package_dir("framework-picosdk")
 assert isdir(FRAMEWORK_DIR)
 
 mcu = "rp2350" if board.get('build.mcu') == "rp2350" else "rp2040"
+is_rp2350 = mcu == "rp2350"
 rp2_variant_dir = join(FRAMEWORK_DIR, "src", mcu)
 header = "%s.h" % board.get("build.variant")
 # try to find the board header in the common directory
@@ -129,6 +130,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_vreg", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_watchdog", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_xosc", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_xip_cache", "include"),
 
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_aon_timer", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_atomic", "include"),
@@ -150,6 +152,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_printf", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_rand", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "SEGGER", "RTT"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_semihosting", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_uart", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_unique_id", "include"),
@@ -175,7 +178,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cxx_options", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_standard_binary_info", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_standard_link", "include"),
-        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_fix", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_fix", "rp2040_usb_device_enumeration", "include"),
 
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_runtime_init", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_runtime", "include"),
@@ -244,6 +247,10 @@ if "PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS" in cpp_defines:
     timeout = cpp_defines["PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS"]
 flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
 
+# default to USB stdio if nothing else defined (or explicitly disabled)
+if not any(str(flag).startswith("PIO_STDIO") for flag in cpp_defines) and "PIO_STDIO_NONE" not in cpp_defines:
+    cpp_defines.append("PIO_STDIO_USB")
+
 def build_double_library():
     pass
 
@@ -253,22 +260,66 @@ def build_float_library():
 def build_divider_library():
     pass
 
-def configure_printf_impl():
-    pass
+# ToDo: this may also be triggered by other functions or configs.
+def build_tinyusb():
+    # setup build to include TinyUSB component
+    env.Append(
+        CPPPATH=[
+            join(FRAMEWORK_DIR, "lib", "tinyusb", "src"),
+        ],
+        CPPDEFINES=[
+            ("CFG_TUSB_DEBUG", 0),
+            ("CFG_TUSB_MCU", "OPT_MCU_RP2040"),
+            ("CFG_TUSB_OS", "OPT_OS_PICO"),
+            ("PICO_RP2040_USB_DEVICE_UFRAME_FIX", 1),
+            ("PICO_RP2040_USB_DEVICE_ENUMERATION_FIX", 1),
+        ]
+    )
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKTinyUSB"),
+        join(FRAMEWORK_DIR, join(FRAMEWORK_DIR, "lib", "tinyusb", "src")),
+        "+<*> -<portable> +<portable/raspberrypi>"
+    )
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKPicoFix"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_fix")
+    )
 
-# default false, only mentioned here:
-# PICO_CXX_ENABLE_EXCEPTIONS
-# PICO_CXX_ENABLE_RTTI
-# PICO_CXX_ENABLE_CXA_ATEXIT
-# PICO_STDIO_USB
-# PICO_STDIO_SEMIHOSTING
-# PICO_STDIO_RTT
-env.Append(CPPDEFINES=flags)
+def configure_printf_impl():
+    # remap PIO macros to macros used in the SDK
+    remap_dict = {
+        "PIO_STDIO_USB": "LIB_PICO_STDIO_USB",
+        "PIO_STDIO_UART": "LIB_PICO_STDIO_UART",
+        "PIO_STDIO_SEMIHOSTING": "LIB_PICO_STDIO_SEMIHOSTING",
+        "PIO_STDIO_RTT": "LIB_PICO_STDIO_RTT"
+    }
+    for key in remap_dict:
+        if key in cpp_defines:
+            flags.append(remap_dict[key])
+
+    # we definitely need tinyusb for this
+    if "LIB_PICO_STDIO_USB" in flags:
+        build_tinyusb()
+    # in any case, when stdio_usb_descriptors.c is compiled, 
+    # it will complain if USBD_MAX_POWER_MA is already defined.
+    # so, let's remove it if it exists.
+    if "USBD_MAX_POWER_MA" in cpp_defines:
+        new_defines = env["CPPDEFINES"].copy()
+        # remove USBD_MAX_POWER_MA tuple
+        new_defines = [d for d in new_defines if not (isinstance(d, tuple) and d[0] == "USBD_MAX_POWER_MA")]
+        env.Replace(CPPDEFINES=new_defines)
 
 build_double_library()
 build_float_library()
 build_divider_library()
 configure_printf_impl()
+
+# default false, only mentioned here:
+# PICO_CXX_ENABLE_EXCEPTIONS
+# PICO_CXX_ENABLE_RTTI
+# PICO_CXX_ENABLE_CXA_ATEXIT
+env.Append(CPPDEFINES=flags)
+
 
 # configure linker script (memmap_default)
 # this will want a file called pico_flash_region.ld:
@@ -333,28 +384,75 @@ default_common_rp2_components = [
     ("hardware_adc", "+<*>"),
     ("hardware_boot_lock", "+<*>"),
     ("hardware_clocks", "+<*>"),
-    ("hardware_gpio", "+<*>"),
-    ("hardware_irq", "+<*>"),
-    ("hardware_pll", "+<*>"),
-    ("hardware_sync", "+<*>"),
-    ("hardware_sync_spin_lock", "+<*>"),
-    ("hardware_spi", "+<*>"),
     ("hardware_dma", "+<*>"),
+    ("hardware_flash", "+<*>"),
+    ("hardware_gpio", "+<*>"),
     ("hardware_i2c", "+<*>"),
+    ("hardware_interp", "+<*>"),
+    ("hardware_irq", "+<*>"),
     ("hardware_pio", "+<*>"),
+    ("hardware_pll", "+<*>"),
+    ("hardware_pwm", "+<*>"),
+    ("hardware_rcp", "+<*>"),
+    ("hardware_resets", "+<*>"),
+    ("hardware_spi", "+<*>"),
+    ("hardware_sync_spin_lock", "+<*>"),
+    ("hardware_sync", "+<*>"),
     ("hardware_ticks", "+<*>"),
     ("hardware_timer", "+<*>"),
     ("hardware_uart", "+<*>"),
+    ("hardware_vreg", "+<*>"),
+    ("hardware_watchdog", "+<*>"),
+    ("hardware_xip_cache", "+<*>"),
     ("hardware_xosc", "+<*>"),
+    ("pico_aon_timer", "+<*>"),
+    ("pico_atomic", "+<*>"),
     ("pico_bootrom", "+<*>"),
+    ("pico_bootsel_via_double_reset", "+<*>"),
     ("pico_clib_interface", "-<*> +<newlib_interface.c>"),
+    ("pico_flash", "+<*>"),
+    ("pico_i2c_slave", "+<*>"),
+    #("pico_malloc", "+<*>"),  # needs additional linker wrapper flags for malloc, calloc, realloc and free
+    ("pico_multicore", "+<*>"),
     ("pico_platform_panic", "+<*>"),
-    ("pico_runtime", "+<*>"),
+    ("pico_rand", "+<*>"),
     ("pico_runtime_init", "+<*>"),
-    ("pico_stdlib", "+<*>"),
-    ("pico_stdio", "+<*>"),
+    ("pico_runtime", "+<*>"),
+    ("pico_stdio_rtt", "+<*>"),
+    ("pico_stdio_semihosting", "+<*>"),
     ("pico_stdio_uart", "+<*>"),
+    ("pico_stdio_usb", "+<*>"),
+    ("pico_stdio", "+<*>"),
+    ("pico_stdlib", "+<*>"),
+    ("pico_standard_binary_info", "+<*>"),
+    ("pico_unique_id", "+<*>"),
 ]
+
+if is_rp2350:
+    default_common_rp2_components.extend(
+        [
+            ("hardware_powman", "+<*>"),
+            ("hardware_sha256", "+<*>"),
+            ("pico_sha256", "+<*>"),
+        ]
+    )
+    env.Append(
+        CPPPATH=[
+            join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_powman", "include"),
+            join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_sha256", "include"),
+            join(FRAMEWORK_DIR, "src", "rp2_common", "pico_sha256", "include"),
+        
+    ])
+else:
+    default_common_rp2_components.extend(
+        [
+            ("hardware_rtc", "+<*>"),
+        ]
+    )
+    env.Append(
+        CPPPATH=[
+            join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),        
+    ])
 
 for component, src_filter in default_common_rp2_components:
     env.BuildSources(

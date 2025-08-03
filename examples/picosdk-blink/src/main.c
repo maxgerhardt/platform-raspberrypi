@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <stdio.h>
 #include "pico/stdlib.h"
 
 // Pico W devices use a GPIO on the WIFI chip for the LED,
@@ -41,9 +42,11 @@ void pico_set_led(bool led_on) {
 }
 
 int main() {
+    stdio_init_all(); // via USB or UART as configured in platformio.ini
     int rc = pico_led_init();
     hard_assert(rc == PICO_OK);
     while (true) {
+        printf("Hello, world!\n");
         pico_set_led(true);
         sleep_ms(LED_DELAY_MS);
         pico_set_led(false);

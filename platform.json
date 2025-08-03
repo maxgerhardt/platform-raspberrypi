@@ -57,7 +57,7 @@
       "type": "framework",
       "optional": true,
       "owner": "platformio",
-      "version": "https://github.com/maxgerhardt/pico-sdk.git#7bb22c52d1553779c21c0dc1d007e2cc8d54885d"
+      "version": "https://github.com/maxgerhardt/pico-sdk.git#4315984000afe20ac82c78c597a3c4a591f524b0"
     },
     "tool-picotool-rp2040-earlephilhower": {
       "type": "uploader",
