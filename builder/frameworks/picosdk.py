@@ -187,6 +187,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdlib", "include"),
 
         join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "asminclude"),
+        join(FRAMEWORK_DIR, "src", mcu, "pico_platform", "include"),
     ],
     #CXXFLAGS=sorted(list(cxxflags - ccflags)),
     LIBPATH=[
@@ -452,13 +453,13 @@ else:
     env.Append(
         CPPPATH=[
             join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),        
-            join(FRAMEWORK_DIR, "src", "rp2040", "pico_platform", "include"),        
     ])
-    env.BuildSources(
-        join("$BUILD_DIR", "PicoSDKRP2040Platform"),
-        join(FRAMEWORK_DIR, "src", "rp2040", "pico_platform")
-    )
 
+env.BuildSources(
+    join("$BUILD_DIR", "PicoSDKPlatform"),
+    join(FRAMEWORK_DIR, "src", mcu, "pico_platform"),
+    "-<*> +<*.c>"
+)
 
 for component, src_filter in default_common_rp2_components:
     env.BuildSources(
