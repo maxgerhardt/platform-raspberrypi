@@ -452,7 +452,13 @@ else:
     env.Append(
         CPPPATH=[
             join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),        
+            join(FRAMEWORK_DIR, "src", "rp2040", "pico_platform", "include"),        
     ])
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKRP2040Platform"),
+        join(FRAMEWORK_DIR, "src", "rp2040", "pico_platform")
+    )
+
 
 for component, src_filter in default_common_rp2_components:
     env.BuildSources(
