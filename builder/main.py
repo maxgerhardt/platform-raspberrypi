@@ -349,7 +349,7 @@ env.Append(
     )
 )
 
-is_arduino_pico_build = env.BoardConfig().get("build.core", "arduino") == "earlephilhower" and "arduino" in env.get("PIOFRAMEWORK")
+is_arduino_pico_build = env.BoardConfig().get("build.core", "arduino") == "earlephilhower" and "arduino" in env.get("PIOFRAMEWORK", [])
 if is_arduino_pico_build:
     pubkey = join(env.subst("$PROJECT_SRC_DIR"), "public.key")
     if isfile(pubkey):
