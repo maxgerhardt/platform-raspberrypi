@@ -216,6 +216,7 @@ env.Replace(
     CXX="%s-g++" % toolchain_tripple,
     GDB="%s-gdb" % toolchain_tripple,
     OBJCOPY="%s-objcopy" % toolchain_tripple,
+    OBJDUMP="%s-objdump" % toolchain_tripple,
     RANLIB="%s-ranlib" % toolchain_tripple,
     SIZETOOL="%s-size" % toolchain_tripple,
 
@@ -281,6 +282,20 @@ def new_check_size(target, source, env):
     print("PSRAM: " + _format_available_bytes(used_psram, psram_len))
 env.CheckUploadSize = new_check_size
 
+def gen_debug_listings(env):
+    for opt, name in [("", ""), ("-S", ".debug")]:
+        env.AddPostAction(
+            "$BUILD_DIR/${PROGNAME}.elf",
+            env.VerboseAction(" ".join([
+                    "$OBJDUMP",
+                    opt,
+                    "-d",
+                    '"%s"' % "$BUILD_DIR/${PROGNAME}.elf",
+                    ">",
+                    '"%s"' % ("$BUILD_DIR/${PROGNAME}" + name + ".lst")
+            ]), "Building $BUILD_DIR/${PROGNAME}" + name + ".lst")
+        )
+    
 # Allow user to override via pre:script
 if env.get("PROGNAME", "program") == "program":
     env.Replace(PROGNAME="firmware")
@@ -387,6 +402,7 @@ else:
             target_signed_bin = env.BinToSignedBin(join("$BUILD_DIR", "${PROGNAME}"), target_firm)
             env.Depends(target_signed_bin, "checkprogsize")
         env.Depends(target_firm, "checkprogsize")
+    gen_debug_listings(env)
 
 env.AddPlatformTarget("buildfs", target_firm, target_firm, "Build Filesystem Image")
 AlwaysBuild(env.Alias("nobuild", target_firm))

@@ -58,14 +58,27 @@ env.Append(
 )
 
 if "BOARD" in env:
+    more_flags = []
+    mcu = env.BoardConfig().get("build.mcu", "")
+    if mcu == "rp2350":
+        more_flags = [
+            "-march=armv8-m.main+fp+dsp",
+            "-mfloat-abi=hard",
+            "-mcmse",
+        ]
+    if mcu == "rp2350-riscv":
+        more_flags = [
+            "-march=rv32imac_zicsr_zifencei_zba_zbb_zbs_zbkb",
+            "-mabi=ilp32"
+        ]
     env.Append(
         ASFLAGS=[
             "-mcpu=%s" % env.BoardConfig().get("build.cpu")
-        ],
+        ] + more_flags,
         CCFLAGS=[
             "-mcpu=%s" % env.BoardConfig().get("build.cpu")
-        ],
+        ] + more_flags,
         LINKFLAGS=[
             "-mcpu=%s" % env.BoardConfig().get("build.cpu")
-        ]
+        ] + more_flags
     )
