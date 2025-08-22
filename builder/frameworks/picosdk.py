@@ -11,8 +11,9 @@ board = env.BoardConfig()
 FRAMEWORK_DIR = platform.get_package_dir("framework-picosdk")
 assert isdir(FRAMEWORK_DIR)
 
-mcu = "rp2350" if board.get('build.mcu') == "rp2350" else "rp2040"
-is_rp2350 = mcu == "rp2350"
+mcu = "rp2350" if "rp2350" in board.get('build.mcu') else "rp2040"
+is_rp2350 = mcu == "rp2350" # could be ARM or RISC-V
+is_riscv = board.get('build.mcu') == "rp2350-riscv"
 rp2_variant_dir = join(FRAMEWORK_DIR, "src", mcu)
 header = "%s.h" % board.get("build.variant")
 # try to find the board header in the common directory
@@ -58,11 +59,9 @@ env.Append(
     #CFLAGS=sorted(list(cflags - ccflags)),
     #CCFLAGS=sorted(list(ccflags)),
     CPPDEFINES=[
-        # BUG: defining PICO_RP2040 in any way will force compilation for 2040 only.
-        # FIX: add RP2350 only if board requested was 2350
-        ("PICO_RP2350" if board.get('build.mcu') == "rp2350" else "PICO_RP2040", 1),
-        ("PICO_RISCV", 0),
-        ("PICO_ARM", 1),
+        ("PICO_RP2350" if is_rp2350 else "PICO_RP2040", 1),
+        ("PICO_RISCV", int(is_riscv)),
+        ("PICO_ARM", int(not is_riscv)),
         ("PICO_CMSIS_DEVICE", "\"%s\"" % mcu.upper()),
         ("PICO_DEFAULT_FLASH_SIZE_BYTES", 2 * 1024 * 1024),
         # default SDK defines for on-hardware build
@@ -112,6 +111,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_exception", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_flash", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_gpio", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_hazard3", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_i2c", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_interp", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_irq", "include"),
@@ -120,6 +120,8 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_pwm", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_resets", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rcp", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_riscv", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_riscv_platform_timer", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_spi", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_sync_spin_lock", "include"),
@@ -335,6 +337,11 @@ env.Replace(LDSCRIPT_PATH=join(FRAMEWORK_DIR, "src", "rp2_common", "pico_crt0", 
 #     join("$BUILD_DIR", "PicoSDK"),
 #     join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Device", "RP2040", "Source")
 # )
+if is_rp2350:
+    pad_checksum_arch = "-a riscv" if is_riscv else "-a arm"
+else:
+    # when calling into the RP2040 version of that script, it actually doesn't take a "-a" argument at all.
+    pad_checksum_arch = ""
 
 gen_boot2_cmd = env.Command(
     join("$BUILD_DIR", "boot2.S"),  # $TARGET
@@ -354,6 +361,7 @@ gen_boot2_cmd = env.Command(
         "-I", "$PROJECT_BUILD_DIR/$PIOENV/generated",
         "-I\"%s\"" % join(rp2_variant_dir, "pico_platform", "include"),
         "-I\"%s\"" % join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_compiler", "include"),
+        "-I\"%s\"" % join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_hazard3", "include"),
         "-I\"%s\"" % join(rp2_variant_dir, "hardware_regs", "include"),
         "-I\"%s\"" % join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_common", "include"),
         "-I\"%s\"" % join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_sections", "include"),
@@ -374,6 +382,7 @@ gen_boot2_cmd = env.Command(
         "$PYTHONEXE",
         join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "pad_checksum"),
         "-s 0xffffffff",
+        pad_checksum_arch,
         join("$BUILD_DIR", "boot2.bin"),
         join("$BUILD_DIR", "boot2.S"),
     ]), "Generating boot2 $BUILD_DIR/boot2.S")
@@ -468,11 +477,11 @@ for component, src_filter in default_common_rp2_components:
         src_filter
     )
 
-# Will be crt0_riscv.S for RISC-V builds..
+pico_crt0 = "crt0_riscv.S" if is_riscv else "crt0.S"
 env.BuildSources(
     join("$BUILD_DIR", "PicoSDKCRT0"),
     join(FRAMEWORK_DIR, "src", "rp2_common", "pico_crt0"),
-    "-<*> +<crt0.S>"
+    "-<*> +<%s>" % pico_crt0
 )
 
 default_common_components = [

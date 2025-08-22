@@ -41,6 +41,12 @@
       "owner": "earlephilhower",
       "version": "https://github.com/maxgerhardt/toolchain-dummy/archive/refs/heads/main.zip"
     },
+    "toolchain-riscv-rp2350": {
+      "type": "toolchain",
+      "optional": true,
+      "owner": "platformio",
+      "version": "https://github.com/maxgerhardt/toolchain-dummy/archive/refs/heads/main-riscv.zip"
+    },
     "framework-arduino-mbed": {
       "type": "framework",
       "optional": true,

@@ -23,6 +23,22 @@ class RaspberrypiPlatform(PlatformBase):
     def is_embedded(self):
         return True
 
+    picosdk_toolchain_riscv = {
+        # Windows
+        "windows_amd64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/pio-riscv-toolchain-15-x64-win.zip",
+        #"windows_x86": ""
+        # No Windows x86, ARM64 or ARM32 builds.
+        # Linux
+        "linux_x86_64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-linux_x86_64-1.150100.250822.tar.gz",
+        #"linux_i686": "",
+        "linux_aarch64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-linux_aarch64-1.150100.250822.tar.gz",
+        #"linux_armv7l": "",
+        #"linux_armv6l": "",
+        # Mac (Intel and ARM are the separate)
+        "darwin_x86_64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-darwin_x86_64-1.150100.250822.tar.gz",
+        "darwin_arm64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-darwin_arm64-1.150100.250822.tar.gz"
+    }
+
     earle_toolchain_arm = {
         # Windows
         "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.arm-none-eabi-1aec55e.250530.zip",
@@ -87,11 +103,15 @@ class RaspberrypiPlatform(PlatformBase):
         "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.picotool-c56c005.250530.tar.gz"
     }
 
+    last_board_is_riscv = False
+
     def configure_default_packages(self, variables, targets):
         #print("System type: %s" % (util.get_systype()))
         # configure arduino core package.
         # select the right one based on the build.core, disable other one.
         board = variables.get("board")
+        # workaround: remember this for upload logic
+        self.last_board_is_riscv = variables.get("board_build.mcu", "").endswith("-riscv")
         board_config = self.board_config(board)
         chip = variables.get("board_build.mcu", board_config.get("build.mcu"))
         build_core = variables.get(
@@ -128,7 +148,13 @@ class RaspberrypiPlatform(PlatformBase):
                 sys.stderr.write(
                     "Error! Unknown build.core value '%s'. Don't know which Arduino core package to use." % build_core)
                 env.Exit(1)
-
+        else:
+            # this is a pico-sdk or baremetal project. if it's for a rp2350-riscv, we need the RISC-V toolchain.
+            if chip == "rp2350-riscv":
+                self.packages["toolchain-riscv-rp2350"]["optional"] = False
+                self.packages["toolchain-riscv-rp2350"]["version"] = RaspberrypiPlatform.picosdk_toolchain_riscv[sys_type]
+                self.packages.pop("toolchain-gccarmnoneeabi", None)
+            # rest is okay for ARM-based RP2040/RP2350.
         # if we want to build a filesystem, we need the tools.
         if "buildfs" in targets:
             self.packages["tool-mklittlefs-rp2040-earlephilhower"]["optional"] = False
@@ -208,6 +234,8 @@ class RaspberrypiPlatform(PlatformBase):
                 }
             else:
                 openocd_target = debug.get("openocd_target")
+                if self.last_board_is_riscv:
+                    openocd_target = "rp2350-riscv.cfg"
                 assert openocd_target, ("Missing target configuration for %s" %
                                         board.id)
                 debug["tools"][link] = {

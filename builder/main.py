@@ -166,7 +166,7 @@ def BeforeUpload(target, source, env):  # pylint: disable=W0613,W0621
         env.TouchSerialPort("$UPLOAD_PORT", 1200)
         # delay a tiny bit in any case
         time.sleep(0.2)
-        max_wait_s = 3.0
+        max_wait_s = 5.0
         while max_wait_s > 0:
             if get_num_rpxxxx_devs(picotool_path) > num_before:
                 print("Device rebooted into BOOTSEL mode successfully.")
