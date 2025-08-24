@@ -22,7 +22,7 @@
             ]
         ],
         "mcu": "rp2040",
-        "variant": "waveshare_rp2040_lcd_0_96"
+        "variant": "waveshare_rp2040_lcd_0.96"
     },
     "debug": {
         "jlink_device": "RP2040_M0_0",

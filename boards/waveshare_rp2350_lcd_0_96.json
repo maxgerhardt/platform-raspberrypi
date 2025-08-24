@@ -22,7 +22,7 @@
             ]
         ],
         "mcu": "rp2350",
-        "variant": "waveshare_rp2350_lcd_0_96"
+        "variant": "waveshare_rp2350_lcd_0.96"
     },
     "debug": {
         "jlink_device": "RP2350_M33_0",
