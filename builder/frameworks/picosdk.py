@@ -15,12 +15,105 @@ mcu = "rp2350" if "rp2350" in board.get('build.mcu') else "rp2040"
 is_rp2350 = mcu == "rp2350" # could be ARM or RISC-V
 is_riscv = board.get('build.mcu') == "rp2350-riscv"
 rp2_variant_dir = join(FRAMEWORK_DIR, "src", mcu)
-header = "%s.h" % board.get("build.variant")
-# try to find the board header in the common directory
-if isfile(join(FRAMEWORK_DIR, "src", "boards", "include", "boards", header)):
-    rp2_board_header = board.get("build.picosdk.board_header", header)
+# load known mappings
+known_mappings: dict[str, str] = {
+    # exact matches
+    "0xcb_helios": "0xcb_helios.h",
+    "adafruit_kb2040": "adafruit_kb2040.h",
+    "arduino_nano_connect": "arduino_nano_rp2040_connect.h",
+    "cytron_maker_pi_rp2040": "cytron_maker_pi_rp2040.h",
+    "generic_rp2350": "pico2.h",
+    "melopero_shake_rp2040": "melopero_shake_rp2040.h",
+    "nullbits_bit_c_pro": "nullbits_bit_c_pro.h",
+    "pico": "pico.h",
+    "pimoroni_pga2040": "pimoroni_pga2040.h",
+    "pimoroni_pga2350": "pimoroni_pga2350.h",
+    "pimoroni_plasma2040": "pimoroni_plasma2040.h",
+    "pimoroni_plasma2350": "pimoroni_plasma2350.h",
+    "pimoroni_servo2040": "pimoroni_servo2040.h",
+    "pimoroni_tiny2040": "pimoroni_tiny2040_2mb.h",
+    "pimoroni_tiny2350": "pimoroni_tiny2350.h",
+    "rpipico": "pico.h",
+    "rpipico2": "pico2.h",
+    "seeed_xiao_rp2040": "seeed_xiao_rp2040.h",
+    "seeed_xiao_rp2350": "seeed_xiao_rp2350.h",
+    "solderparty_rp2040_stamp": "solderparty_rp2040_stamp.h",
+    "solderparty_rp2350_stamp": "solderparty_rp2350_stamp.h",
+    "solderparty_rp2350_stamp_xl": "solderparty_rp2350_stamp_xl.h",
+    "sparkfun_iotredboard_rp2350": "sparkfun_iotredboard_rp2350.h",
+    "sparkfun_xrp_controller": "sparkfun_xrp_controller.h",
+    "sparkfun_xrp_controller_beta": "pico_w.h",
+    "waveshare_rp2040_matrix": "waveshare_rp2040_matrix.h",
+    "waveshare_rp2040_one": "waveshare_rp2040_one.h",
+    "waveshare_rp2040_pizero": "waveshare_rp2040_pizero.h",
+    "waveshare_rp2040_plus_16mb": "waveshare_rp2040_plus_16mb.h",
+    "waveshare_rp2040_plus_4mb": "waveshare_rp2040_plus_4mb.h",
+    "waveshare_rp2040_zero": "waveshare_rp2040_zero.h",
+    "waveshare_rp2350_zero": "waveshare_rp2350_zero.h",
+    # suggested matches and manually checked /modified
+    "adafruit_feather": "adafruit_feather_rp2040.h",
+    "adafruit_feather_adalogger": "adafruit_feather_rp2040_adalogger.h",
+    "adafruit_feather_can": "adafruit_feather_rp2040.h",
+    "adafruit_feather_dvi": "adafruit_feather_rp2040.h",
+    "adafruit_feather_prop_maker": "adafruit_feather_rp2040",
+    "adafruit_feather_rfm": "adafruit_feather_rp2040.h",
+    "adafruit_feather_rp2350_adalogger": "adafruit_feather_rp2350.h",
+    "adafruit_feather_rp2350_hstx": "adafruit_feather_rp2350.h",
+    "adafruit_feather_scorpio": "adafruit_feather_rp2040.h",
+    "adafruit_feather_thinkink": "adafruit_feather_rp2040.h",
+    "adafruit_feather_usb_host": "adafruit_feather_rp2040_usb_host.h",
+    "adafruit_fruitjam": "adafruit_fruit_jam.h",
+    "adafruit_itsybitsy": "adafruit_itsybitsy_rp2040.h",
+    "adafruit_macropad2040": "adafruit_macropad_rp2040.h",
+    "adafruit_qtpy": "adafruit_qtpy_rp2040.h",
+    "adafruit_trinkeyrp2040qt": "adafruit_trinkey_qt2040.h",
+    "challenger_2350_bconnect": "ilabs_challenger_rp2350_bconnect.h",
+    "challenger_2350_wifi6_ble5": "ilabs_challenger_rp2350_wifi_ble.h",
+    "cytron_maker_nano_rp2040": "cytron_maker_pi_rp2040.h",
+    "cytron_maker_uno_rp2040": "cytron_maker_pi_rp2040.h",
+    "datanoisetv_picoadk" : "datanoisetv_rp2040_dsp.h",
+    "datanoisetv_picoadk_v2": "datanoisetv_rp2350_dsp.h",
+    "generic": "pico.h",
+    "nanorp2040connect": "arduino_nano_rp2040_connect.h",
+    "olimex_pico2xl": "olimex_rp2350_xl.h",
+    "olimex_pico2xxl": "olimex_rp2350_xxl.h",
+    "pimoroni_pico_plus_2": "pimoroni_pico_plus2_rp2350.h",
+    "pimoroni_pico_plus_2w": "pimoroni_pico_plus2_w_rp2350.h",
+    "rpipico2w": "pico2_w.h",
+    "rpipicow": "pico_w.h",
+    "sparkfun_iotnode_lorawanrp2350": "sparkfun_iotnode_lorawan_rp2350.h",
+    "sparkfun_micromodrp2040": "sparkfun_micromod.h",
+    "sparkfun_promicrorp2040": "sparkfun_promicro.h",
+    "sparkfun_promicrorp2350": "sparkfun_promicro_rp2350.h",
+    "sparkfun_thingplusrp2040": "sparkfun_thingplus.h",
+    "sparkfun_thingplusrp2350": "sparkfun_thingplus_rp2350.h",
+    "waveshare_rp2040_lcd_0_96": "waveshare_rp2040_lcd_0.96.h",
+    "waveshare_rp2040_lcd_1_28": "waveshare_rp2040_lcd_1.28.h",
+    "waveshare_rp2040_plus": "waveshare_rp2040_plus_4mb.h",
+    "waveshare_rp2350_lcd_0_96": "waveshare_rp2350_lcd_0.96.h",
+    "waveshare_rp2350_plus": "waveshare_rp2350_plus_4mb.h",
+    "wiznet_5100s_evb_pico": "wiznet_w5100s_evb_pico.h",
+    "wiznet_5100s_evb_pico2": "wiznet_w5100s_evb_pico2.h"
+}
+
+# check if the board JSON or the platformio.ini is dictating the use of a specific board header
+if board.get("build.picosdk.board_header", "") != "":
+    rp2_board_header = board.get("build.picosdk.board_header")
+    print("Using specified Pico-SDK board header: %s" % rp2_board_header)
 else:
-    rp2_board_header = board.get("build.picosdk.board_header", "pico.h")
+    # is there a known mapping for this board?
+    if board.id in known_mappings:
+        rp2_board_header = known_mappings[board.id]
+        print("Using known Pico-SDK board header for %s: %s" % (board.id, rp2_board_header))
+    else:
+        # fallback to either pico.h or pico2.h depending on rp2040 or rp2350
+        rp2_board_header = "pico2.h" if is_rp2350 else "pico.h"
+        print("[WARN] No known Pico-SDK board header for %s, falling back to '%s'. Set one using 'board_build.picosdk.board_header = ..' in the platformio.ini" % (board.id, rp2_board_header))
+
+# board header file must exist at this point.
+if not isfile(join(FRAMEWORK_DIR, "src", "boards", "include", "boards", rp2_board_header)):
+    sys.stderr.write("Could not find board header file %s in the Pico-SDK, aborting.\n" % rp2_board_header)
+    env.Exit(-1)
 
 # include basic settings
 env.SConscript("_bare.py")
