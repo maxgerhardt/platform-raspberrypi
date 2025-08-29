@@ -402,7 +402,9 @@ else:
             target_signed_bin = env.BinToSignedBin(join("$BUILD_DIR", "${PROGNAME}"), target_firm)
             env.Depends(target_signed_bin, "checkprogsize")
         env.Depends(target_firm, "checkprogsize")
-    gen_debug_listings(env)
+    # generate a disasembly listing of the firmware if requested
+    if str(board.get("build.generate_disassembly", "no")).lower() in ("yes", "true", "on"):
+        gen_debug_listings(env)
 
 env.AddPlatformTarget("buildfs", target_firm, target_firm, "Build Filesystem Image")
 AlwaysBuild(env.Alias("nobuild", target_firm))
