@@ -678,8 +678,98 @@ elif upload_protocol == "custom":
 if not upload_actions:
     sys.stderr.write("Warning! Unknown upload protocol %s\n" % upload_protocol)
 
+def generate_openocd_action(args: list[str], action_name:str):
+    openocd_path = join(platform.get_package_dir("tool-openocd-rp2040-earlephilhower") or "", "bin", "openocd")
+    cmd = [
+        "\"%s\"" % openocd_path
+    ]
+    default_args: list[str] = debug_tools.get(upload_protocol).get("server").get("arguments", [])
+    speed = env.GetProjectOption("debug_speed") or "1000"
+    # small fixup with shell escaping. Quote args that have spaces in them.
+    for (i, arg) in enumerate(default_args.copy()):
+        if " " in arg and not arg.startswith('"'):
+            default_args[i] = '"%s"' % arg
+    cmd.extend(default_args)
+    cmd.extend([
+        "-c", "\"adapter speed %s\"" % speed,
+        "-c",
+        "\"debug_level %d\"" % (3 if int(ARGUMENTS.get("PIOVERBOSE", 0)) else 2),
+        "-c", "\"gdb_port disabled\"",
+        "-c", "\"tcl_port disabled\"",
+        "-c", "\"telnet_port disabled\"",
+        "-c", "init",
+        "-c", "halt"
+    ])
+    cmd.extend(args)
+    cmd.extend([
+        "-c", "shutdown"
+    ])
+    return env.VerboseAction(" ".join(cmd), action_name)
+
+
 AlwaysBuild(env.AddPlatformTarget("upload", upload_source, upload_actions, "Default Upload"))
 env.AddPlatformTarget("uploadfs", target_firm, upload_actions, "Upload Filesystem Image")
+
+# Erase targets
+access_via_openocd = upload_protocol in debug_tools
+if access_via_openocd:
+    if "jlink" not in upload_protocol:
+        env.AddPlatformTarget(
+            "erase", None, generate_openocd_action([
+                "-c", "\"flash probe 0\"",
+                "-c", "\"flash erase_sector 0 0 last\"",
+                "-c"  "reset"
+            ], "Erasing Flash."),
+            "Erase Flash (via OpenOCD)"
+        )
+    else:
+        env.AddPlatformTarget(
+            "erase", None, env.VerboseAction(" ".join([
+                "JLink.exe" if system() == "Windows" else "JLinkExe",
+                "-device", board.get("debug", {}).get("jlink_device"),
+                "-speed", env.GetProjectOption("debug_speed", "4000"),
+                "-if", ("jtag" if upload_protocol == "jlink-jtag" else "swd"),
+                "-autoconnect", "1",
+                "-NoGui", "1",
+                "-CommanderScript", '"%s"' % join(
+                    env.subst("$BUILD_DIR"), "erase.jlink")
+            ]), "Erasing Flash."),
+            "Erase Flash (via J-Link)"
+        )
+        # create the erase script
+        build_dir = env.subst("$BUILD_DIR")
+        if not isdir(build_dir):
+            makedirs(build_dir)
+        script_path = join(build_dir, "erase.jlink")
+        commands = [
+            "h",
+            "erase",
+            "RSetType 2",
+            "ResetX 200",
+            "q"
+        ]
+        with open(script_path, "w") as fp:
+            fp.write("\n".join(commands))
+elif upload_protocol == "picotool" or upload_protocol == "mbed":
+    # get path of this platform to get flash_nuke.elf
+    path_to_flash_nuke_uf2 = join(platform.get_dir(), "misc", "binaries", "flash_nuke.uf2")
+    # use copyfile on disk, picotool throws  "ERROR: Found overlapping memory ranges 0x20000000->0x20000100 and 0x20000000->20000100".
+    if isfile(path_to_flash_nuke_uf2):
+        def upload_flash_nuke_via_copyfile(target, source, env):
+            rpi_disk = find_rpi_disk(None)
+            if rpi_disk is None:
+                print("Error: Cannot find BOOTSEL disk. Is the board connected in BOOTSEL mode?")
+                env.Exit(1)
+            copyfile(path_to_flash_nuke_uf2, join(rpi_disk, "flash_nuke.uf2"))
+            print("Flash Nuke Firmware has been successfully uploaded to " + str(rpi_disk) + ". Wait until boot drive appears again.\n")
+        env.AddPlatformTarget(
+            "erase", None, [
+                env.VerboseAction(BeforeUpload, "Looking for upload port..."),
+                env.VerboseAction(upload_flash_nuke_via_copyfile, "Copying flash_nuke.uf2 to upload disk..."),
+            ],
+            "Erase Flash (via flash_nuke.uf2)"
+        )
+
 #
 # Default targets
 #
