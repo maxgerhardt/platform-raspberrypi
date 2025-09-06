@@ -15,7 +15,7 @@
 import sys
 from platform import system
 from os import makedirs, remove, environ
-from os.path import isdir, join, isfile, exists
+from os.path import isdir, join, isfile, exists, relpath
 import re
 import time
 from shutil import copyfile
@@ -52,6 +52,8 @@ def convert_size_expression_to_int(expression):
     return int(number)
 
 def fetch_fs_size(env):
+    if "FS_START" in env:
+        return
     # follow generation formulas from makeboards.py for Earle Philhower core
     # given the total flash size, a user can specify
     # the amount for the filesystem (0MB, 2MB, 4MB, 8MB, 16MB)
@@ -758,8 +760,15 @@ elif upload_protocol == "picotool" or upload_protocol == "mbed":
         def upload_flash_nuke_via_copyfile(target, source, env):
             rpi_disk = find_rpi_disk(None)
             if rpi_disk is None:
-                print("Error: Cannot find BOOTSEL disk. Is the board connected in BOOTSEL mode?")
-                env.Exit(1)
+                print("Couldn't find upload disk, waiting for at maximum 10 seconds..")
+                for _ in range(10):
+                    rpi_disk = find_rpi_disk(None)
+                    if rpi_disk is not None:
+                        break
+                    time.sleep(1)
+                if rpi_disk is None:
+                    print("Error: Cannot find BOOTSEL disk. Is the board connected in BOOTSEL mode?")
+                    env.Exit(1)
             copyfile(path_to_flash_nuke_uf2, join(rpi_disk, "flash_nuke.uf2"))
             print("Flash Nuke Firmware has been successfully uploaded to " + str(rpi_disk) + ". Wait until boot drive appears again.\n")
         env.AddPlatformTarget(
@@ -769,6 +778,37 @@ elif upload_protocol == "picotool" or upload_protocol == "mbed":
             ],
             "Erase Flash (via flash_nuke.uf2)"
         )
+
+# Add target for unified firmware and filesystem build
+def concat_firmware_and_filesystem_to_one_uf2(target, source, env):
+    elf_file = join(env.subst("$BUILD_DIR"), env.subst("${PROGNAME}.elf"))
+    firmware_uf2 = elf_file.replace(".elf", ".uf2")
+    filesystem_bin = join(env.subst("$BUILD_DIR"), env.get("PICO_FS_IMAGE_NAME", "littlefs") + ".bin")
+    # convert filesystem .bin to .uf2
+    filesystem_uf2 = filesystem_bin.replace(".bin", ".uf2")
+    env.Execute(" ".join(["picotool", "uf2", "convert", '"%s"' % filesystem_bin, '"%s"' % filesystem_uf2, "--offset", hex(env["FS_START"])]))
+    if not isfile(firmware_uf2):
+        print("Error: Cannot find firmware UF2 file %s" % firmware_uf2)
+        env.Exit(1)
+    if not isfile(filesystem_uf2):
+        print("Error: Cannot find filesystem UF2 file %s" % filesystem_uf2)
+        env.Exit(1)
+    # target is a firmware_with_fs.uf2 file, binary concatenate
+    target_file = join(env.subst("$BUILD_DIR"), env.subst("${PROGNAME}_with_fs.uf2"))
+    with open(target_file, "wb") as wfd:
+        for f in (firmware_uf2, filesystem_uf2):
+            with open(f, "rb") as fd:
+                wfd.write(fd.read())
+    print("Built combined UF2 file: %s" % relpath(target_file, env.subst("$PROJECT_DIR")))
+
+target_filesystem = env.DataToBin(join("$BUILD_DIR", "${PICO_FS_IMAGE_NAME}"), "$PROJECTDATA_DIR")
+env.AddPlatformTarget(
+    # depends on target_firm and target_filesystem to ensure firmware is built.
+    "buildunified", [target_firm, target_filesystem], [
+        # concatinate the two .uf2 files using a callacb function. This is valid.
+        env.VerboseAction(concat_firmware_and_filesystem_to_one_uf2, "Creating unified UF2 file...")
+    ], "Build unified FW+FS UF2 image",
+)
 
 #
 # Default targets

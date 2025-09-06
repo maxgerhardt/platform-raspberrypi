@@ -11,10 +11,11 @@ jobs:
         example:
           - "examples/arduino-blink"
           - "examples/arduino-ethernet-ota"
-          - "examples/arduino-wifi-scan"
+          - "examples/arduino-external-libs"
+          - "examples/arduino-littlefs"
           - "examples/arduino-ota"
           - "examples/arduino-signed-ota"
-          - "examples/arduino-external-libs"
+          - "examples/arduino-wifi-scan"
           - "examples/picosdk-blink"
     runs-on: ${{ matrix.os }}
     steps:
