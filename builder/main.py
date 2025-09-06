@@ -387,7 +387,7 @@ target_signed_bin = None
 if "nobuild" in COMMAND_LINE_TARGETS:
     target_elf = join("$BUILD_DIR", "${PROGNAME}.elf")
     target_firm = join("$BUILD_DIR", "${PROGNAME}.bin")
-    target_firm = join("$BUILD_DIR", "${PROGNAME}.bin.signed")
+    target_signed_bin = join("$BUILD_DIR", "${PROGNAME}.bin.signed")
 else:
     target_elf = env.BuildProgram()
     if set(["buildfs", "uploadfs"]) & set(COMMAND_LINE_TARGETS):
