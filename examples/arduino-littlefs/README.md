@@ -8,7 +8,7 @@ How to build PlatformIO based project
 
 ```shell
 # Change directory to example
-$ cd platform-raspberrypi/examples/arduino-blink
+$ cd platform-raspberrypi/examples/arduino-littlefs
 
 # Build project
 $ pio run
@@ -22,8 +22,8 @@ $ pio run --target clean
 
 ## Notes
 
-For Raspberry Pi Pico devices, two Arduino cores exist:
-* https://github.com/arduino/ArduinoCore-mbed
-* https://github.com/earlephilhower/arduino-pico
+Take care to use the project task "Upload Filesystem Image" to actually upload the LittleFS filesystem image onto your microcontroller. Otherwise, the firmware will not find the expected file. See documentation
 
-This examples showcases how to use both of these cores in the `platformio.ini`.
+https://arduino-pico.readthedocs.io/en/latest/platformio.html#filesystem-uploading
+
+This also serves as test to build a unified UF2 image that contains both firmware and filesystem. This is a work in progress.
