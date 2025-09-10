@@ -26,4 +26,8 @@ Take care to use the project task "Upload Filesystem Image" to actually upload t
 
 https://arduino-pico.readthedocs.io/en/latest/platformio.html#filesystem-uploading
 
-This also serves as test to build a unified UF2 image that contains both firmware and filesystem. This is a work in progress.
+This also serves as test to build a unified UF2 image that contains both firmware and filesystem. To build it, use the project task "Build unified FW + FS UF2 Image", or
+
+```sh
+$ pio run --target buildunified
+```

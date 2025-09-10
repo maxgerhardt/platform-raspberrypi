@@ -779,6 +779,77 @@ elif upload_protocol == "picotool" or upload_protocol == "mbed":
             "Erase Flash (via flash_nuke.uf2)"
         )
 
+# Simple merge for two UF2 files, rewriting them to have sequentual block numbers and a combined numBlocks.
+import struct
+from dataclasses import dataclass
+
+UF2_BLOCK_SIZE = 512
+UF2_HEADER_FORMAT = "<IIIIIIII"  # 8 unsigned little-endian 32-bit ints
+UF2_HEADER_SIZE = struct.calcsize(UF2_HEADER_FORMAT)
+
+@dataclass
+class UF2Header:
+    magicStart0: int
+    magicStart1: int
+    flags: int
+    targetAddr: int
+    payloadSize: int
+    blockNo: int
+    numBlocks: int
+    fileSize: int # or familyID if 0x00002000 present in flags
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "UF2Header":
+        fields = struct.unpack(UF2_HEADER_FORMAT, data[:UF2_HEADER_SIZE])
+        return cls(*fields)
+
+    def to_bytes(self) -> bytes:
+        return struct.pack(
+            UF2_HEADER_FORMAT, self.magicStart0, self.magicStart1,
+            self.flags, self.targetAddr, self.payloadSize,
+            self.blockNo, self.numBlocks, self.fileSize)
+
+    def __str__(self) -> str:
+        return (f"Block {self.blockNo}/{self.numBlocks-1} | Addr=0x{self.targetAddr:08X} | Size={self.payloadSize} | "
+                f"Flags=0x{self.flags:X} | FileID=0x{self.fileSize:X} | NumBlocks={self.numBlocks}")
+
+def merge_uf2(file1: str, file2: str, outfile: str):
+    def read_blocks(filename):
+        with open(filename, "rb") as f:
+            data = f.read()
+        if len(data) % UF2_BLOCK_SIZE != 0:
+            raise ValueError(f"{filename} is not a valid UF2 file")
+        return [data[i:i+UF2_BLOCK_SIZE] for i in range(0, len(data), UF2_BLOCK_SIZE)]
+
+    # Read both input UF2 files
+    blocks1 = read_blocks(file1)
+    blocks2 = read_blocks(file2)
+
+    all_blocks = blocks1 + blocks2
+    total_blocks = len(all_blocks)
+
+    # the UF2 file has to have the same family ID for the entire file 
+    first_header = UF2Header.from_bytes(all_blocks[0])
+    chosen_file_id = first_header.fileSize
+
+    new_blocks = []
+    for new_block_no, raw in enumerate(all_blocks):
+        header = UF2Header.from_bytes(raw)
+        # Update block number + total blocks + family ID
+        header.blockNo = new_block_no
+        header.numBlocks = total_blocks
+        header.fileSize = chosen_file_id
+        # Rebuild block
+        new_block = header.to_bytes() + raw[UF2_HEADER_SIZE:]
+        assert len(new_block) == UF2_BLOCK_SIZE
+        new_blocks.append(new_block)
+
+    # Write merged UF2
+    with open(outfile, "wb") as f:
+        for blk in new_blocks:
+            f.write(blk)
+    return total_blocks
+
 # Add target for unified firmware and filesystem build
 def concat_firmware_and_filesystem_to_one_uf2(target, source, env):
     elf_file = join(env.subst("$BUILD_DIR"), env.subst("${PROGNAME}.elf"))
@@ -795,11 +866,8 @@ def concat_firmware_and_filesystem_to_one_uf2(target, source, env):
         env.Exit(1)
     # target is a firmware_with_fs.uf2 file, binary concatenate
     target_file = join(env.subst("$BUILD_DIR"), env.subst("${PROGNAME}_with_fs.uf2"))
-    with open(target_file, "wb") as wfd:
-        for f in (firmware_uf2, filesystem_uf2):
-            with open(f, "rb") as fd:
-                wfd.write(fd.read())
-    print("Built combined UF2 file: %s" % relpath(target_file, env.subst("$PROJECT_DIR")))
+    num_blocks = merge_uf2(firmware_uf2, filesystem_uf2, target_file)
+    print("Built combined UF2 file: %s (%d blocks)" % (relpath(target_file, env.subst("$PROJECT_DIR")), num_blocks))
 
 target_filesystem = env.DataToBin(join("$BUILD_DIR", "${PICO_FS_IMAGE_NAME}"), "$PROJECTDATA_DIR")
 env.AddPlatformTarget(
