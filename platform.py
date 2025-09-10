@@ -36,7 +36,7 @@ class RaspberrypiPlatform(PlatformBase):
         #"linux_armv6l": "",
         # Mac (Intel and ARM are the separate)
         "darwin_x86_64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-darwin_x86_64-1.150100.250822.tar.gz",
-        "darwin_arm64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-darwin_arm64-1.150100.250822.tar.gz"
+        "darwin_arm64": "https://github.com/maxgerhardt/toolchain-riscv-rp2350/releases/download/15.1.0/toolchain-riscv-rp2350-darwin_arm64-1.150100.251009.tar.gz"
     }
 
     earle_toolchain_arm = {
