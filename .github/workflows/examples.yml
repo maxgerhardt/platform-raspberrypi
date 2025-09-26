@@ -43,9 +43,9 @@ jobs:
             sudo apt-get install -y openssl
           elif [ "$RUNNER_OS" == "Windows" ]; then
             choco install wget unzip
-            wget "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.3.1.zip"
-            unzip openssl-3.3.1.zip
-            echo "${{ github.workspace }}\openssl-3.3.1\openssl-3\x64\bin" >> $GITHUB_PATH
+            wget "https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.5.3.zip"
+            unzip openssl-3.5.3.zip
+            echo "${{ github.workspace }}\openssl-3.5.3\x64\bin" >> $GITHUB_PATH
             openssl --version
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew install openssl
