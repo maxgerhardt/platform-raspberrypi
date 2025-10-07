@@ -781,11 +781,14 @@ elif upload_protocol == "picotool" or upload_protocol == "mbed":
 
 # Simple merge for two UF2 files, rewriting them to have sequentual block numbers and a combined numBlocks.
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 UF2_BLOCK_SIZE = 512
 UF2_HEADER_FORMAT = "<IIIIIIII"  # 8 unsigned little-endian 32-bit ints
 UF2_HEADER_SIZE = struct.calcsize(UF2_HEADER_FORMAT)
+RP2040_FAMILY_ID = 0xE48BFF56
+SECTOR_SIZE = 4096
+BLOCK_DATA_SIZE = 476  # Payload space within a 512B UF2 block
 
 @dataclass
 class UF2Header:
@@ -796,58 +799,85 @@ class UF2Header:
     payloadSize: int
     blockNo: int
     numBlocks: int
-    fileSize: int # or familyID if 0x00002000 present in flags
+    fileSize: int  # or familyID if 0x00002000 in flags
 
     @classmethod
     def from_bytes(cls, data: bytes) -> "UF2Header":
-        fields = struct.unpack(UF2_HEADER_FORMAT, data[:UF2_HEADER_SIZE])
-        return cls(*fields)
+        return cls(*struct.unpack(UF2_HEADER_FORMAT, data[:UF2_HEADER_SIZE]))
 
     def to_bytes(self) -> bytes:
-        return struct.pack(
-            UF2_HEADER_FORMAT, self.magicStart0, self.magicStart1,
-            self.flags, self.targetAddr, self.payloadSize,
-            self.blockNo, self.numBlocks, self.fileSize)
+        return struct.pack(UF2_HEADER_FORMAT,
+                           self.magicStart0, self.magicStart1, self.flags,
+                           self.targetAddr, self.payloadSize, self.blockNo,
+                           self.numBlocks, self.fileSize)
+    def __str__(self):
+        return (f"Block {self.blockNo}/{self.numBlocks-1} | "
+                f"Addr=0x{self.targetAddr:08X} | Size={self.payloadSize} | "
+                f"Flags=0x{self.flags:X} | FileID=0x{self.fileSize:X}")
 
-    def __str__(self) -> str:
-        return (f"Block {self.blockNo}/{self.numBlocks-1} | Addr=0x{self.targetAddr:08X} | Size={self.payloadSize} | "
-                f"Flags=0x{self.flags:X} | FileID=0x{self.fileSize:X} | NumBlocks={self.numBlocks}")
+def read_blocks(filename: str) -> list[bytes]:
+    data = open(filename, "rb").read()
+    if len(data) % UF2_BLOCK_SIZE != 0:
+        raise ValueError(f"{filename} is not a valid UF2 file")
+    return [data[i:i + UF2_BLOCK_SIZE] for i in range(0, len(data), UF2_BLOCK_SIZE)]
+
+
+def pad_rp2040_blocks(blocks: list[bytes], family_id: int, skip_last_sector=False) -> list[bytes]:
+    """Pads 4KB sectors to full 16x256B blocks for RP2040 flash errata workaround."""
+    if not blocks:
+        return []
+
+    headers = [UF2Header.from_bytes(b) for b in blocks]
+    template = headers[0]
+    magic_end = blocks[0][-4:]
+    block_map = {h.targetAddr: b for h, b in zip(headers, blocks)}
+    step = template.payloadSize or 256
+
+    addrs = sorted(block_map)
+    first_sector = addrs[0] & ~0xFFF
+    last_sector = addrs[-1] & ~0xFFF
+    padded = []
+
+    for sector in range(first_sector, last_sector + SECTOR_SIZE, SECTOR_SIZE):
+        if skip_last_sector and sector == last_sector:
+            padded += [block_map[a] for a in range(sector, sector + SECTOR_SIZE, step) if a in block_map]
+            break
+
+        for offset in range(0, SECTOR_SIZE, step):
+            addr = sector + offset
+            if addr in block_map:
+                padded.append(block_map[addr])
+            else:
+                hdr = replace(template, targetAddr=addr, payloadSize=step, fileSize=family_id)
+                padded.append(hdr.to_bytes() + bytes(BLOCK_DATA_SIZE) + magic_end)
+
+    return sorted(padded, key=lambda b: UF2Header.from_bytes(b).targetAddr)
 
 def merge_uf2(file1: str, file2: str, outfile: str):
-    def read_blocks(filename):
-        with open(filename, "rb") as f:
-            data = f.read()
-        if len(data) % UF2_BLOCK_SIZE != 0:
-            raise ValueError(f"{filename} is not a valid UF2 file")
-        return [data[i:i+UF2_BLOCK_SIZE] for i in range(0, len(data), UF2_BLOCK_SIZE)]
+    """Merge two UF2 files with monotonic block numbering and RP2040 padding fix."""
+    blocks1, blocks2 = read_blocks(file1), read_blocks(file2)
+    chosen_file_id = UF2Header.from_bytes(blocks1[0]).fileSize
 
-    # Read both input UF2 files
-    blocks1 = read_blocks(file1)
-    blocks2 = read_blocks(file2)
+    # RP2040-specific 4KB padding workaround
+    if chosen_file_id == RP2040_FAMILY_ID:
+        blocks1 = pad_rp2040_blocks(blocks1, chosen_file_id)
+        blocks2 = pad_rp2040_blocks(blocks2, chosen_file_id, skip_last_sector=True)
 
     all_blocks = blocks1 + blocks2
     total_blocks = len(all_blocks)
-
-    # the UF2 file has to have the same family ID for the entire file 
-    first_header = UF2Header.from_bytes(all_blocks[0])
-    chosen_file_id = first_header.fileSize
-
     new_blocks = []
-    for new_block_no, raw in enumerate(all_blocks):
+
+    for i, raw in enumerate(all_blocks):
         header = UF2Header.from_bytes(raw)
-        # Update block number + total blocks + family ID
-        header.blockNo = new_block_no
+        header.blockNo = i
         header.numBlocks = total_blocks
         header.fileSize = chosen_file_id
-        # Rebuild block
-        new_block = header.to_bytes() + raw[UF2_HEADER_SIZE:]
-        assert len(new_block) == UF2_BLOCK_SIZE
-        new_blocks.append(new_block)
+        new_blocks.append(header.to_bytes() + raw[UF2_HEADER_SIZE:])
 
-    # Write merged UF2
     with open(outfile, "wb") as f:
-        for blk in new_blocks:
-            f.write(blk)
+        f.write(b"".join(new_blocks))
+
+    #print(f"Merged {len(blocks1)} + {len(blocks2)} blocks to {total_blocks} total (Family ID 0x{chosen_file_id:X})")
     return total_blocks
 
 # Add target for unified firmware and filesystem build
