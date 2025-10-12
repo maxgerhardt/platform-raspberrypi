@@ -1,0 +1,5 @@
+.program hello
+loop:
+    pull  ; Pull a word from FIFO into OSR (blocking)
+    out pins, 1
+    jmp loop

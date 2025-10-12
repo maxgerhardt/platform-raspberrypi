@@ -8,7 +8,7 @@ How to build PlatformIO based project
 
 ```shell
 # Change directory to example
-$ cd platform-raspberrypi/examples/picosdk-blink
+$ cd platform-raspberrypi/examples/picosdk-pioasm-blink
 
 # Build project
 $ pio run

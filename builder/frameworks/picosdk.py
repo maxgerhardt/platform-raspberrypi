@@ -118,18 +118,21 @@ if not isfile(join(FRAMEWORK_DIR, "src", "boards", "include", "boards", rp2_boar
 # include basic settings
 env.SConscript("_bare.py")
 
-def preprocess_pio_sources(src_dir, build_dir):
-    """Scan a folder recursively for .pio files and generate .pio.h in build_dir/genned."""
+# process .pio files of user NOW
+env.SConscript("_build_pioasm.py")
+
+# for processing .pio files of the Pico-SDK. Build and depend only on C files within the module
+def preprocess_pio_sources(src_dir):
+    """Scan a folder recursively for .pio files and generate .pio.h in build_dir/generated."""
     from pathlib import Path
     pio_sources = list(Path(src_dir).rglob("*.pio"))
     headers = []
 
-    # place all generated headers in $BUILD_DIR/genned
+    # place all generated headers in $BUILD_DIR/generated
     genned_dir = Path(env.subst("$BUILD_DIR")) / "generated"
     genned_dir.mkdir(parents=True, exist_ok=True)
 
     for src in pio_sources:
-        print("FOUND PIO SOURCE", src)
         target = genned_dir / src.with_suffix(".pio.h").name
         headers.append(env.PioToPioH(str(target), str(src)))
     return headers
@@ -585,7 +588,7 @@ for component, src_filter in default_common_rp2_components:
     comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", component)
     comp_build_dir = join("$BUILD_DIR", "PicoSDK%s" % component)
 
-    pio_headers = preprocess_pio_sources(comp_src_dir, env.subst(comp_build_dir))
+    pio_headers = preprocess_pio_sources(comp_src_dir)
     c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
 
     if pio_headers:
