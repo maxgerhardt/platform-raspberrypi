@@ -118,6 +118,22 @@ if not isfile(join(FRAMEWORK_DIR, "src", "boards", "include", "boards", rp2_boar
 # include basic settings
 env.SConscript("_bare.py")
 
+def preprocess_pio_sources(src_dir, build_dir):
+    """Scan a folder recursively for .pio files and generate .pio.h in build_dir/genned."""
+    from pathlib import Path
+    pio_sources = list(Path(src_dir).rglob("*.pio"))
+    headers = []
+
+    # place all generated headers in $BUILD_DIR/genned
+    genned_dir = Path(env.subst("$BUILD_DIR")) / "generated"
+    genned_dir.mkdir(parents=True, exist_ok=True)
+
+    for src in pio_sources:
+        print("FOUND PIO SOURCE", src)
+        target = genned_dir / src.with_suffix(".pio.h").name
+        headers.append(env.PioToPioH(str(target), str(src)))
+    return headers
+
 # generate version file
 # .. actually unmutable, so pre-generatable
 # generate config_autogen.h
@@ -246,6 +262,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_platform_sections", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_printf", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_rand", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_status_led", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "SEGGER", "RTT"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_semihosting", "include"),
@@ -521,6 +538,7 @@ default_common_rp2_components = [
     ("pico_rand", "+<*>"),
     ("pico_runtime_init", "+<*>"),
     ("pico_runtime", "+<*>"),
+    ("pico_status_led", "+<*>"),
     ("pico_stdio_rtt", "+<*>"),
     ("pico_stdio_semihosting", "+<*>"),
     ("pico_stdio_uart", "+<*>"),
@@ -564,11 +582,14 @@ env.BuildSources(
 )
 
 for component, src_filter in default_common_rp2_components:
-    env.BuildSources(
-        join("$BUILD_DIR", "PicoSDK%s" % component),
-        join(FRAMEWORK_DIR, "src", "rp2_common", component),
-        src_filter
-    )
+    comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", component)
+    comp_build_dir = join("$BUILD_DIR", "PicoSDK%s" % component)
+
+    pio_headers = preprocess_pio_sources(comp_src_dir, env.subst(comp_build_dir))
+    c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
+
+    if pio_headers:
+        env.Depends(c_nodes, pio_headers)
 
 pico_crt0 = "crt0_riscv.S" if is_riscv else "crt0.S"
 env.BuildSources(

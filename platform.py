@@ -71,6 +71,22 @@ class RaspberrypiPlatform(PlatformBase):
         "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.riscv32-unknown-elf-1aec55e.250530.tar.gz"
     }
 
+    earle_pioasm = {
+        # Windows
+        "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.pioasm-9fdfe11.250530.zip",
+        "windows_x86": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-w64-mingw32.pioasm-9fdfe11.250530.zip",
+        # No Windows ARM64 or ARM32 builds.
+        # Linux
+        "linux_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-linux-gnu.pioasm-9fdfe11.250530.tar.gz",
+        "linux_i686": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/i686-linux-gnu.pioasm-9fdfe11.250530.tar.gz",
+        "linux_aarch64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-linux-gnu.pioasm-9fdfe11.250530.tar.gz",
+        "linux_armv7l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.pioasm-9fdfe11.250530.tar.gz",
+        "linux_armv6l": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/arm-linux-gnueabihf.pioasm-9fdfe11.250530.tar.gz",
+        # Mac (Intel and ARM are separate)
+        "darwin_x86_64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-apple-darwin20.4.pioasm-9fdfe11.250530.tar.gz",
+        "darwin_arm64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/aarch64-apple-darwin20.4.pioasm-9fdfe11.250530.tar.gz"
+    }
+
     earle_openocd = {
         # Windows
         "windows_amd64": "https://github.com/earlephilhower/pico-quick-toolchain/releases/download/4.1.0/x86_64-w64-mingw32.openocd-ebec9504d.250530.zip",
@@ -137,7 +153,9 @@ class RaspberrypiPlatform(PlatformBase):
                 self.packages["framework-arduino-mbed"]["optional"] = True
                 self.packages.pop("toolchain-gccarmnoneeabi", None)
                 self.packages["toolchain-rp2040-earlephilhower"]["optional"] = False
+                self.packages["tool-pioasm-rp2040-earlephilhower"]["optional"] = False
                 # Configure toolchain download link dynamically
+                self.packages["tool-pioasm-rp2040-earlephilhower"]["version"] = RaspberrypiPlatform.earle_pioasm[sys_type]
                 # RP2350 (RISC-V)
                 if chip == "rp2350-riscv":
                     self.packages["toolchain-rp2040-earlephilhower"]["version"] = RaspberrypiPlatform.earle_toolchain_riscv[sys_type]
@@ -154,6 +172,8 @@ class RaspberrypiPlatform(PlatformBase):
                 self.packages["toolchain-riscv-rp2350"]["optional"] = False
                 self.packages["toolchain-riscv-rp2350"]["version"] = RaspberrypiPlatform.picosdk_toolchain_riscv[sys_type]
                 self.packages.pop("toolchain-gccarmnoneeabi", None)
+            self.packages["tool-pioasm-rp2040-earlephilhower"]["optional"] = False
+            self.packages["tool-pioasm-rp2040-earlephilhower"]["version"] = RaspberrypiPlatform.earle_pioasm[sys_type]
             # rest is okay for ARM-based RP2040/RP2350.
         # if we want to build a filesystem, we need the tools.
         if "buildfs" in targets:

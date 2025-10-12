@@ -341,6 +341,16 @@ env.Append(
                 "$TARGET"
             ]), "Building $TARGET"),
             suffix=".bin.signed"
+        ),
+        PioToPioH=Builder(
+            action=env.VerboseAction(" ".join([
+                "pioasm.exe" if system() == "Windows" else "pioasm",
+                "-o",
+                "c-sdk",
+                "$SOURCES",
+                "$TARGET"
+            ]), "Building $TARGET"),
+            suffix=".pio.h"
         )
     )
 )

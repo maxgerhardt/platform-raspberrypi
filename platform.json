@@ -71,6 +71,12 @@
       "owner": "platformio",
       "version": "https://github.com/maxgerhardt/picotool-dummy/archive/refs/heads/main.zip"
     },
+    "tool-pioasm-rp2040-earlephilhower": {
+      "type": "uploader",
+      "optional": false,
+      "owner": "platformio",
+      "version": "https://github.com/maxgerhardt/pioasm-dummy/archive/refs/heads/main.zip"
+    },
     "tool-openocd-rp2040-earlephilhower": {
       "type": "uploader",
       "optional": true,

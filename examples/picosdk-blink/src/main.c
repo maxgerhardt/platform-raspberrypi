@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "pico/status_led.h"
 
 // Pico W devices use a GPIO on the WIFI chip for the LED,
 // so when building for Pico W, CYW43_WL_GPIO_LED_PIN will be defined
@@ -23,11 +24,25 @@ int pico_led_init(void) {
     // so we can use normal GPIO functionality to turn the led on and off
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
-    return PICO_OK;
 #elif defined(CYW43_WL_GPIO_LED_PIN)
     // For Pico W devices we need to initialise the driver etc
-    return cyw43_arch_init();
+    int ret = cyw43_arch_init();
+    if (ret != PICO_OK) {
+        return ret;
+    }
 #endif
+    // colored status LED in addition to regular one
+#if defined (PICO_COLORED_STATUS_LED_AVAILABLE)
+    if(!status_led_init()) {
+        printf("Failed to initialize status led!\n");
+        return PICO_ERROR_IO;
+    } else {
+        printf("Colored status LED init OK!\n");
+    }
+#else
+    printf("No colored status LED defined!\n");
+#endif
+    return PICO_OK;
 }
 
 // Turn the led on or off
@@ -38,6 +53,16 @@ void pico_set_led(bool led_on) {
 #elif defined(CYW43_WL_GPIO_LED_PIN)
     // Ask the wifi "driver" to set the GPIO on or off
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+#endif
+#if defined (PICO_COLORED_STATUS_LED_AVAILABLE)
+    if(led_on) {
+        /* green */
+        colored_status_led_set_on_with_color(
+            PICO_COLORED_STATUS_LED_COLOR_FROM_WRGB(128, 0, 255, 0)
+        );
+    } else {
+        colored_status_led_set_state(false);
+    }
 #endif
 }
 
