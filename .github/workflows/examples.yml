@@ -10,6 +10,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         example:
           - "examples/arduino-blink"
+          - "examples/arduino-pioasm-blink"
           - "examples/arduino-ethernet-ota"
           - "examples/arduino-external-libs"
           - "examples/arduino-littlefs"
