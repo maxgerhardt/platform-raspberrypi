@@ -1,0 +1,21 @@
+.program blink
+; Fully autonomous LED blink using nested loops
+; Blinks ~2 Hz with sysclk=125 MHz and clkdiv=1.0
+
+.wrap_target
+    set pins, 1         ; Turn LED on
+    set x, 31           ; Outer loop count
+on_delay_outer:
+        set y, 31       ; Inner loop count
+on_delay_inner:
+            jmp y-- on_delay_inner [31]
+        jmp x-- on_delay_outer
+
+    set pins, 0         ; Turn LED off
+    set x, 31           ; Outer loop count
+off_delay_outer:
+        set y, 31
+off_delay_inner:
+            jmp y-- off_delay_inner [31]
+        jmp x-- off_delay_outer
+.wrap

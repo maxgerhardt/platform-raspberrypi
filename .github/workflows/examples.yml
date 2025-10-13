@@ -18,6 +18,7 @@ jobs:
           - "examples/arduino-wifi-scan"
           - "examples/picosdk-blink"
           - "examples/picosdk-pioasm-blink"
+          - "examples/picosdk-pioasm-blink-auto"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
