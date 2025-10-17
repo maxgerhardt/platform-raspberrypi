@@ -4,12 +4,12 @@
             "earlephilhower": {
                 "boot2_source": "none.S",
                 "usb_vid": "0x2E8A",
-                "usb_pid": "0x10EC"
+                "usb_pid": "0x1000"
             }
         },
         "core": "earlephilhower",
         "cpu": "cortex-m33",
-        "extra_flags": "-DARDUINO_SOLDERED_NULA_RP2350 -DARDUINO_ARCH_RP2040 -DUSBD_MAX_POWER_MA=500  -DPICO_CYW43_SUPPORTED=1 -DCYW43_PIN_WL_DYNAMIC=1",
+        "extra_flags": "-DARDUINO_MYRP_2350B -DARDUINO_ARCH_RP2040 -DUSBD_MAX_POWER_MA=500 ",
         "f_cpu": "150000000L",
         "hwids": [
             [
@@ -18,11 +18,11 @@
             ],
             [
                 "0x2E8A",
-                "0x10EC"
+                "0x1000"
             ]
         ],
         "mcu": "rp2350",
-        "variant": "soldered_nula_rp2350"
+        "variant": "MyRP_2350B"
     },
     "debug": {
         "jlink_device": "RP2350_M33_0",
@@ -33,10 +33,10 @@
         "arduino",
         "picosdk"
     ],
-    "name": "NULA RP2350",
+    "name": "RP2350B",
     "upload": {
         "maximum_ram_size": 524288,
-        "maximum_size": 16777216,
+        "maximum_size": 4194304,
         "require_upload_port": true,
         "native_usb": true,
         "use_1200bps_touch": true,
@@ -49,8 +49,9 @@
             "raspberrypi-swd",
             "picotool",
             "picoprobe"
-        ]
+        ],
+        "psram_length": 8388608
     },
-    "url": "https://www.raspberrypi.org/products/raspberry-pi-pico/",
-    "vendor": "Soldered Electronics"
+    "url": "https://www.mymakers.online",
+    "vendor": "MyMakers"
 }
