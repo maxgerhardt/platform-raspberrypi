@@ -31,7 +31,8 @@
     },
     "frameworks": [
         "arduino",
-        "picosdk"
+        "picosdk",
+        "mbed"
     ],
     "name": "Pico",
     "upload": {

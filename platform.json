@@ -27,6 +27,13 @@
     "picosdk": {
       "package": "framework-picosdk",
       "script": "builder/frameworks/picosdk.py"
+    },
+    "mbed-ce": {
+      "package": "framework-mbed-ce",
+      "script": "builder/frameworks/mbed-ce.py",
+      "description": "Community edition of Mbed OS, an open-source operating system designed for the Internet of Things.",
+      "homepage": "https://mbed-ce.dev",
+      "title": "Mbed CE"
     }
   },
   "packages": {
@@ -65,6 +72,12 @@
       "owner": "platformio",
       "version": "https://github.com/maxgerhardt/pico-sdk.git#4315984000afe20ac82c78c597a3c4a591f524b0"
     },
+    "framework-mbed-ce": {
+      "type": "framework",
+      "optional": true,
+      "owner": "mbed-ce-project",
+      "version": ">=6.99"
+    },
     "tool-picotool-rp2040-earlephilhower": {
       "type": "uploader",
       "optional": false,
@@ -94,6 +107,16 @@
       "optional": true,
       "owner": "earlephilhower",
       "version": "~5.100300.0"
+    },
+    "tool-ninja": {
+      "optional": true,
+      "owner": "platformio",
+      "version": ">=1.7.0"
+    },
+    "tool-cmake": {
+      "optional": true,
+      "owner": "platformio",
+      "version": ">=3.21.0"
     }
   }
 }
