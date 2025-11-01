@@ -7,7 +7,7 @@ from SCons.Script import DefaultEnvironment
 env = DefaultEnvironment()
 
 PROJECT_SRC_DIR = Path(env['PROJECT_SRC_DIR'])
-LIB_SRC_DIRS = Path(env['PROJECT_LIBDEPS_DIR']) / env['PIOENV']
+LIB_SRC_DIR = Path(env['PROJECT_LIBDEPS_DIR']) / env['PIOENV']
 
 # Find the bundled pioasm executable
 pioasm_dir = env.PioPlatform().get_package_dir("tool-pioasm-rp2040-earlephilhower")
@@ -38,4 +38,4 @@ def process_pio_files(src_dir: Path):
 process_pio_files(PROJECT_SRC_DIR)
 
 # Process library source files
-process_pio_files(LIB_SRC_DIRS)
+process_pio_files(LIB_SRC_DIR)
