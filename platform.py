@@ -165,7 +165,7 @@ class RaspberrypiPlatform(PlatformBase):
             else:
                 sys.stderr.write(
                     "Error! Unknown build.core value '%s'. Don't know which Arduino core package to use." % build_core)
-                env.Exit(1)
+                sys.exit(-1)
         else:
             # this is a pico-sdk or baremetal project. if it's for a rp2350-riscv, we need the RISC-V toolchain.
             if chip == "rp2350-riscv":
