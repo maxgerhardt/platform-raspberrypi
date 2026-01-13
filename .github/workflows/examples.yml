@@ -20,6 +20,7 @@ jobs:
           - "examples/picosdk-blink"
           - "examples/picosdk-pioasm-blink"
           - "examples/picosdk-pioasm-blink-auto"
+          - "examples/mbed-ce-hello-world"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
