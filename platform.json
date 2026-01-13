@@ -76,7 +76,7 @@
       "type": "framework",
       "optional": true,
       "owner": "mbed-ce-project",
-      "version": ">=6.99"
+      "version": ">=6.99.2"
     },
     "tool-picotool-rp2040-earlephilhower": {
       "type": "uploader",
