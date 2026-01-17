@@ -32,7 +32,7 @@
     "frameworks": [
         "arduino",
         "picosdk",
-        "mbed"
+        "mbed-ce"
     ],
     "name": "Pico",
     "upload": {
