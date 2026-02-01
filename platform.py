@@ -167,10 +167,11 @@ class RaspberrypiPlatform(PlatformBase):
                     "Error! Unknown build.core value '%s'. Don't know which Arduino core package to use." % build_core)
                 sys.exit(-1)
         elif "mbed-ce" in frameworks:
-            # Mbed CE only supports ARM cores and needs CMake and Ninja
-            self.packages.pop("toolchain-gccarmnoneeabi", None)
-            self.packages["toolchain-rp2040-earlephilhower"]["optional"] = False
-            self.packages["toolchain-rp2040-earlephilhower"]["version"] = RaspberrypiPlatform.earle_toolchain_arm[sys_type]
+            # Mbed CE only supports ARM cores and needs CMake and Ninja.
+            # Note: Currently unable to link via the earlephilhower toolchain as that seems to have retargetable locking
+            # turned on in Newlib, which Mbed does not currently support.
+            self.packages["toolchain-rp2040-earlephilhower"]["optional"] = True
+            self.packages.pop("toolchain-rp2040-earlephilhower", None)
             self.packages["tool-cmake"]["optional"] = False
             self.packages["tool-ninja"]["optional"] = False
         else:
