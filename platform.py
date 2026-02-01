@@ -166,6 +166,14 @@ class RaspberrypiPlatform(PlatformBase):
                 sys.stderr.write(
                     "Error! Unknown build.core value '%s'. Don't know which Arduino core package to use." % build_core)
                 sys.exit(-1)
+        elif "mbed-ce" in frameworks:
+            # Mbed CE only supports ARM cores and needs CMake and Ninja.
+            # Note: Currently unable to link via the earlephilhower toolchain as that seems to have retargetable locking
+            # turned on in Newlib, which Mbed does not currently support.
+            self.packages["toolchain-rp2040-earlephilhower"]["optional"] = True
+            self.packages.pop("toolchain-rp2040-earlephilhower", None)
+            self.packages["tool-cmake"]["optional"] = False
+            self.packages["tool-ninja"]["optional"] = False
         else:
             # this is a pico-sdk or baremetal project. if it's for a rp2350-riscv, we need the RISC-V toolchain.
             if chip == "rp2350-riscv":
