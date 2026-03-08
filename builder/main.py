@@ -723,9 +723,11 @@ AlwaysBuild(env.AddPlatformTarget("upload", upload_source, upload_actions, "Defa
 env.AddPlatformTarget("uploadfs", target_firm, upload_actions, "Upload Filesystem Image")
 
 # Erase targets
-access_via_openocd = upload_protocol in debug_tools
-if access_via_openocd:
-    if "jlink" not in upload_protocol:
+access_via_debug_tool = upload_protocol in debug_tools
+debug_tools_not_using_openocd = ["jlink", "blackmagic", "blackmagic-jtag"]
+if access_via_debug_tool:
+    # means "upload protocol uses openocd.."
+    if upload_protocol not in debug_tools_not_using_openocd:
         env.AddPlatformTarget(
             "erase", None, generate_openocd_action([
                 "-c", "\"flash probe 0\"",
@@ -734,7 +736,7 @@ if access_via_openocd:
             ], "Erasing Flash."),
             "Erase Flash (via OpenOCD)"
         )
-    else:
+    elif "jlink" in upload_protocol:
         env.AddPlatformTarget(
             "erase", None, env.VerboseAction(" ".join([
                 "JLink.exe" if system() == "Windows" else "JLinkExe",
@@ -762,6 +764,7 @@ if access_via_openocd:
         ]
         with open(script_path, "w") as fp:
             fp.write("\n".join(commands))
+    # Erase via blackmagic not implemented yet, but should be possible with GDB commands.
 elif upload_protocol == "picotool" or upload_protocol == "mbed":
     # get path of this platform to get flash_nuke.elf
     path_to_flash_nuke_uf2 = join(platform.get_dir(), "misc", "binaries", "flash_nuke.uf2")
