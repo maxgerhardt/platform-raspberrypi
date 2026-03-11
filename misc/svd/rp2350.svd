@@ -63,6 +63,7 @@ SPDX-License-Identifier: BSD-3-Clause
     <peripherals>
     <peripheral>
         <name>RESETS</name>
+        <description>RESETS</description>
         <baseAddress>0x40020000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -530,6 +531,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PSM</name>
+        <description>PSM</description>
         <baseAddress>0x40018000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -1073,6 +1075,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>CLOCKS</name>
+        <description>CLOCKS</description>
         <baseAddress>0x40010000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -1759,7 +1762,7 @@ SPDX-License-Identifier: BSD-3-Clause
                 <name>CLK_SYS_CTRL</name>
                 <addressOffset>0x0000003c</addressOffset>
                 <description>Clock control, can be changed on-the-fly (except for auxsrc)</description>
-                <resetValue>0x00000000</resetValue>
+                <resetValue>0x00000041</resetValue>
                 <fields>
                     <field>
                         <name>AUXSRC</name>
@@ -3623,6 +3626,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TICKS</name>
+        <description>TICKS</description>
         <baseAddress>0x40108000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -3910,6 +3914,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PADS_BANK0</name>
+        <description>PADS_BANK0</description>
         <baseAddress>0x40038000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -7596,6 +7601,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PADS_QSPI</name>
+        <description>PADS_QSPI</description>
         <baseAddress>0x40040000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -8070,6 +8076,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>IO_QSPI</name>
+        <description>IO_QSPI</description>
         <baseAddress>0x40030000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -11475,6 +11482,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>IO_BANK0</name>
+        <description>IO_BANK0</description>
         <baseAddress>0x40028000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -32774,6 +32782,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SYSINFO</name>
+        <description>SYSINFO</description>
         <baseAddress>0x40000000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -32871,6 +32880,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SHA256</name>
+        <description>SHA256</description>
         <description>SHA-256 hash function implementation</description>
         <baseAddress>0x400f8000</baseAddress>
         <addressBlock>
@@ -33082,6 +33092,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>HSTX_FIFO</name>
+        <description>HSTX_FIFO</description>
         <description>FIFO status and write access for HSTX</description>
         <baseAddress>0x50600000</baseAddress>
         <addressBlock>
@@ -33137,6 +33148,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>HSTX_CTRL</name>
+        <description>HSTX_CTRL</description>
         <description>Control interface to HSTX. For FIFO write access and status, see the HSTX_FIFO register block.</description>
         <baseAddress>0x400c0000</baseAddress>
         <addressBlock>
@@ -33570,6 +33582,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>EPPB</name>
+        <description>EPPB</description>
         <description>Cortex-M33 EPPB vendor register block for RP2350</description>
         <baseAddress>0xe0080000</baseAddress>
         <addressBlock>
@@ -33636,6 +33649,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PPB</name>
+        <description>PPB</description>
         <description>TEAL registers accessible through the debug interface</description>
         <baseAddress>0xe0000000</baseAddress>
         <addressBlock>
@@ -41053,6 +41067,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>QMI</name>
+        <description>QMI</description>
         <description>QSPI Memory Interface.
 
             Provides a memory-mapped interface to up to two SPI/DSPI/QSPI flash or PSRAM devices. Also provides a serial interface for programming and configuration of the external device.</description>
@@ -42697,6 +42712,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>XIP_CTRL</name>
+        <description>XIP_CTRL</description>
         <description>QSPI flash execute-in-place block</description>
         <baseAddress>0x400c8000</baseAddress>
         <addressBlock>
@@ -42926,6 +42942,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>XIP_AUX</name>
+        <description>XIP_AUX</description>
         <description>Auxiliary DMA access to XIP FIFOs, via fast AHB bus access</description>
         <baseAddress>0x50500000</baseAddress>
         <addressBlock>
@@ -43030,6 +43047,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SYSCFG</name>
+        <description>SYSCFG</description>
         <description>Register block for various chip control signals</description>
         <baseAddress>0x40008000</baseAddress>
         <addressBlock>
@@ -43232,7 +43250,8 @@ SPDX-License-Identifier: BSD-3-Clause
                 <fields>
                     <field>
                         <name>AUXCTRL</name>
-                        <description>* Bits 7:2: Reserved
+                        <description>* Bits 7:3: Reserved
+                            * Bit 2: Set to mask OTP power analogue power supply detection from resetting OTP controller and PSM
 
                             * Bit 1: When clear, the LPOSC output is XORed into the TRNG ROSC output as an additional, uncorrelated entropy source. When set, this behaviour is disabled.
 
@@ -43246,6 +43265,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>XOSC</name>
+        <description>XOSC</description>
         <description>Controls the crystal oscillator</description>
         <baseAddress>0x40048000</baseAddress>
         <addressBlock>
@@ -43424,6 +43444,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PLL_SYS</name>
+        <description>PLL_SYS</description>
         <baseAddress>0x40050000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -43613,6 +43634,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>ACCESSCTRL</name>
+        <description>ACCESSCTRL</description>
         <description>Hardware access control registers</description>
         <baseAddress>0x40060000</baseAddress>
         <addressBlock>
@@ -47092,6 +47114,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>UART0</name>
+        <description>UART0</description>
         <baseAddress>0x40070000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -47901,6 +47924,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>ROSC</name>
+        <description>ROSC</description>
         <baseAddress>0x400e8000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -47936,9 +47960,9 @@ SPDX-License-Identifier: BSD-3-Clause
                         <name>FREQ_RANGE</name>
                         <description>Controls the number of delay stages in the ROSC ring 
                             LOW uses stages 0 to 7 
-                            MEDIUM uses stages 2 to 7 
-                            HIGH uses stages 4 to 7 
-                            TOOHIGH uses stages 6 to 7 and should not be used because its frequency exceeds design specifications 
+                            MEDIUM uses stages 0 to 5
+                            HIGH uses stages 0 to 3
+                            TOOHIGH uses stages 0 to 1 and should not be used because its frequency exceeds design specifications
                             The clock output will not glitch when changing the range up one step at a time 
                             The clock output will glitch when changing the range down 
                             Note: the values here are gray coded which is why HIGH comes before TOOHIGH</description>
@@ -47976,7 +48000,7 @@ SPDX-License-Identifier: BSD-3-Clause
                     2 bits set triples drive strength 
                     3 bits set quadruples drive strength 
                     For frequency randomisation set both DS0_RANDOM=1 &amp; DS1_RANDOM=1</description>
-                <resetValue>0x00000000</resetValue>
+                <resetValue>0x00000088</resetValue>
                 <fields>
                     <field>
                         <name>PASSWD</name>
@@ -48242,6 +48266,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>POWMAN</name>
+        <description>POWMAN</description>
         <description>Controls vreg, bor, lposc, chip resets &amp; xosc startup, powman and provides scratch register for general use and for bootcode use</description>
         <baseAddress>0x40100000</baseAddress>
         <addressBlock>
@@ -49053,51 +49078,56 @@ SPDX-License-Identifier: BSD-3-Clause
                     bit 0 = SRAM1 
                     0 = powered up 
                     1 = powered down 
-                    When POWMAN_STATE_REQ is written, the POWMAN_STATE_WAITING flag is set while the Power Manager determines what is required. If an invalid transition is requested the Power Manager will still register the request in POWMAN_STATE_REQ but will also set the POWMAN_BAD_REQ flag. It will then implement the power-up requests and ignore the power down requests. To do nothing would risk entering an unrecoverable lock-up state. Invalid requests are: any combination of power up and power down requests any request that results in swcore boing powered and xip unpowered If the request is to power down the switched-core domain then POWMAN_STATE_WAITING stays active until the processors halt. During this time the POWMAN_STATE_REQ field can be re-written to change or cancel the request. When the power state transition begins the POWMAN_STATE_WAITING_flag is cleared, the POWMAN_STATE_CHANGING flag is set and POWMAN register writes are ignored until the transition completes.</description>
+                    When POWMAN_STATE_REQ is written, the POWMAN_STATE_WAITING flag is set while the Power Manager determines what is required. If an invalid transition is requested the Power Manager will still register the request in POWMAN_STATE_REQ but will also set the POWMAN_BAD_REQ flag. It will then implement the power-up requests and ignore the power down requests. To do nothing would risk entering an unrecoverable lock-up state. Invalid requests are: any combination of power up and power down requests any request that results in swcore being powered and xip unpowered If the request is to power down the switched-core domain then POWMAN_STATE_WAITING stays active until the processors halt. During this time the POWMAN_STATE_REQ field can be re-written to change or cancel the request. When the power state transition begins the POWMAN_STATE_WAITING_flag is cleared, the POWMAN_STATE_CHANGING flag is set and POWMAN register writes are ignored until the transition completes.</description>
                 <resetValue>0x0000000f</resetValue>
                 <fields>
                     <field>
                         <name>CHANGING</name>
+                        <description>Indicates a power state change is in progress</description>
                         <bitRange>[13:13]</bitRange>
                         <access>read-only</access>
                     </field>
                     <field>
                         <name>WAITING</name>
+                        <description>Indicates the power manager has received a state change request and is waiting for other actions to complete before executing it</description>
                         <bitRange>[12:12]</bitRange>
                         <access>read-only</access>
                     </field>
                     <field>
                         <name>BAD_HW_REQ</name>
-                        <description>Bad hardware initiated state request. Went back to state 0 (i.e. everything powered up)</description>
+                        <description>Invalid hardware initiated state request, power up requests actioned, power down requests ignored</description>
                         <bitRange>[11:11]</bitRange>
                         <access>read-only</access>
                     </field>
                     <field>
                         <name>BAD_SW_REQ</name>
-                        <description>Bad software initiated state request. No action taken.</description>
+                        <description>Invalid software initiated state request ignored</description>
                         <bitRange>[10:10]</bitRange>
                         <access>read-only</access>
                     </field>
                     <field>
                         <name>PWRUP_WHILE_WAITING</name>
-                        <description>Request ignored because of a pending pwrup request. See current_pwrup_req. Note this blocks powering up AND powering down.</description>
+                        <description>Indicates that a power state change request was ignored because of a pending power state change request</description>
                         <bitRange>[9:9]</bitRange>
                         <access>read-write</access>
                         <modifiedWriteValues>oneToClear</modifiedWriteValues>
                     </field>
                     <field>
                         <name>REQ_IGNORED</name>
+                        <description>Indicates that a software state change request was ignored because it clashed with an ongoing hardware or debugger request</description>
                         <bitRange>[8:8]</bitRange>
                         <access>read-write</access>
                         <modifiedWriteValues>oneToClear</modifiedWriteValues>
                     </field>
                     <field>
                         <name>REQ</name>
+                        <description>This is written by software or hardware to request a new power state</description>
                         <bitRange>[7:4]</bitRange>
                         <access>read-write</access>
                     </field>
                     <field>
                         <name>CURRENT</name>
+                        <description>Indicates the current power state</description>
                         <bitRange>[3:0]</bitRange>
                         <access>read-only</access>
                     </field>
@@ -50220,6 +50250,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>WATCHDOG</name>
+        <description>WATCHDOG</description>
         <baseAddress>0x400d8000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -50414,6 +50445,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>DMA</name>
+        <description>DMA</description>
         <description>DMA with separate read and write masters</description>
         <baseAddress>0x50000000</baseAddress>
         <addressBlock>
@@ -62229,7 +62261,8 @@ SPDX-License-Identifier: BSD-3-Clause
 
                             After writing, this register must be polled until it returns all-zero. Until this point, it is unsafe to restart the channel.</description>
                         <bitRange>[15:0]</bitRange>
-                        <access>write-only</access>
+                        <access>read-write</access>
+                        <modifiedWriteValues>oneToClear</modifiedWriteValues>
                     </field>
                 </fields>
             </register>
@@ -63900,6 +63933,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TIMER0</name>
+        <description>TIMER0</description>
         <description>Controls time and alarms
 
             time is a 64 bit value indicating the time since power-on
@@ -64284,6 +64318,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PWM</name>
+        <description>PWM</description>
         <description>Simple PWM</description>
         <baseAddress>0x400a8000</baseAddress>
         <addressBlock>
@@ -66520,6 +66555,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>ADC</name>
+        <description>ADC</description>
         <description>Control and data interface to SAR ADC</description>
         <baseAddress>0x400a0000</baseAddress>
         <addressBlock>
@@ -66790,6 +66826,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>I2C0</name>
+        <description>I2C0</description>
         <description>DW_apb_i2c address block
 
             List of configuration constants for the Synopsys I2C hardware (you may see references to these in I2C register header; these are *fixed* values, set at hardware design time):
@@ -69429,6 +69466,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SPI0</name>
+        <description>SPI0</description>
         <baseAddress>0x40080000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -69851,6 +69889,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PIO0</name>
+        <description>PIO0</description>
         <description>Programmable IO block</description>
         <baseAddress>0x50200000</baseAddress>
         <addressBlock>
@@ -72794,6 +72833,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>BUSCTRL</name>
+        <description>BUSCTRL</description>
         <description>Register block for busfabric control signals and performance counters</description>
         <baseAddress>0x40068000</baseAddress>
         <addressBlock>
@@ -74089,6 +74129,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SIO</name>
+        <description>SIO</description>
         <description>Single-cycle IO block 
             Provides core-local and inter-core hardware for the two processors, with single-cycle access.</description>
         <baseAddress>0xd0000000</baseAddress>
@@ -76519,6 +76560,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>BOOTRAM</name>
+        <description>BOOTRAM</description>
         <description>Additional registers mapped adjacent to the bootram, for use by the bootrom.</description>
         <baseAddress>0x400e0000</baseAddress>
         <addressBlock>
@@ -76674,6 +76716,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>CORESIGHT_TRACE</name>
+        <description>CORESIGHT_TRACE</description>
         <description>Coresight block - RP specific registers</description>
         <baseAddress>0x50700000</baseAddress>
         <addressBlock>
@@ -76735,6 +76778,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>USB</name>
+        <description>USB</description>
         <description>USB FS/LS controller device registers</description>
         <baseAddress>0x50110000</baseAddress>
         <addressBlock>
@@ -77605,7 +77649,7 @@ SPDX-License-Identifier: BSD-3-Clause
                     </field>
                     <field>
                         <name>SUSPENDED</name>
-                        <description>Bus in suspended state. Valid for device. Device will go into suspend if neither Keep Alive / SOF frames are enabled.</description>
+                        <description>Bus in suspended state. Valid for device and host. Host and device will go into suspend if neither Keep Alive / SOF frames are enabled.</description>
                         <bitRange>[4:4]</bitRange>
                         <access>read-write</access>
                         <modifiedWriteValues>oneToClear</modifiedWriteValues>
@@ -80050,6 +80094,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TRNG</name>
+        <description>TRNG</description>
         <description>ARM TrustZone RNG register block</description>
         <baseAddress>0x400f0000</baseAddress>
         <addressBlock>
@@ -80598,6 +80643,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>GLITCH_DETECTOR</name>
+        <description>GLITCH_DETECTOR</description>
         <description>Glitch detector controls</description>
         <baseAddress>0x40158000</baseAddress>
         <addressBlock>
@@ -80807,6 +80853,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>OTP</name>
+        <description>OTP</description>
         <description>SNPS OTP control IF (SBPI and RPi wrapper control)</description>
         <baseAddress>0x40120000</baseAddress>
         <addressBlock>
@@ -84803,6 +84850,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>OTP_DATA</name>
+        <description>OTP_DATA</description>
         <description>Predefined OTP data layout for RP2350</description>
         <baseAddress>0x40130000</baseAddress>
         <addressBlock>
@@ -87082,6 +87130,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>OTP_DATA_RAW</name>
+        <description>OTP_DATA_RAW</description>
         <description>Predefined OTP data layout for RP2350</description>
         <baseAddress>0x40134000</baseAddress>
         <addressBlock>
@@ -100204,6 +100253,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TBMAN</name>
+        <description>TBMAN</description>
         <description>For managing simulation testbenches</description>
         <baseAddress>0x40160000</baseAddress>
         <addressBlock>
@@ -100242,6 +100292,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>USB_DPRAM</name>
+        <description>USB_DPRAM</description>
         <description>DPRAM layout for USB device.</description>
         <baseAddress>0x50100000</baseAddress>
         <addressBlock>

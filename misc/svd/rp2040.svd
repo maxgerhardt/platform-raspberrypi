@@ -48,6 +48,7 @@ SPDX-License-Identifier: BSD-3-Clause
     <peripherals>
     <peripheral>
         <name>RESETS</name>
+        <description>RESETS</description>
         <baseAddress>0x4000c000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -458,6 +459,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PSM</name>
+        <description>PSM</description>
         <baseAddress>0x40010000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -841,6 +843,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>CLOCKS</name>
+        <description>CLOCKS</description>
         <baseAddress>0x40008000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -2967,6 +2970,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PADS_BANK0</name>
+        <description>PADS_BANK0</description>
         <baseAddress>0x4001c000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -5179,6 +5183,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PADS_QSPI</name>
+        <description>PADS_QSPI</description>
         <baseAddress>0x40020000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -5623,6 +5628,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>IO_QSPI</name>
+        <description>IO_QSPI</description>
         <baseAddress>0x40018000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -8088,6 +8094,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>IO_BANK0</name>
+        <description>IO_BANK0</description>
         <baseAddress>0x40014000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -21077,6 +21084,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SYSINFO</name>
+        <description>SYSINFO</description>
         <baseAddress>0x40000000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -21142,6 +21150,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PPB</name>
+        <description>PPB</description>
         <baseAddress>0xe0000000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -22025,6 +22034,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SSI</name>
+        <description>SSI</description>
         <description>DW_apb_ssi has the following features: 
             * APB interface – Allows for easy integration into a DesignWare Synthesizable Components for AMBA 2 implementation. 
             * APB3 and APB4 protocol support. 
@@ -22782,6 +22792,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>XIP_CTRL</name>
+        <description>XIP_CTRL</description>
         <description>QSPI flash execute-in-place block</description>
         <baseAddress>0x14000000</baseAddress>
         <addressBlock>
@@ -22974,6 +22985,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SYSCFG</name>
+        <description>SYSCFG</description>
         <description>Register block for various chip control signals</description>
         <baseAddress>0x40004000</baseAddress>
         <addressBlock>
@@ -23189,6 +23201,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>XOSC</name>
+        <description>XOSC</description>
         <description>Controls the crystal oscillator</description>
         <baseAddress>0x40024000</baseAddress>
         <addressBlock>
@@ -23365,6 +23378,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PLL_SYS</name>
+        <description>PLL_SYS</description>
         <baseAddress>0x40028000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -23485,6 +23499,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>UART0</name>
+        <description>UART0</description>
         <baseAddress>0x40034000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -24294,6 +24309,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>ROSC</name>
+        <description>ROSC</description>
         <baseAddress>0x40060000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -24609,6 +24625,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>WATCHDOG</name>
+        <description>WATCHDOG</description>
         <baseAddress>0x40058000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -24833,6 +24850,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>DMA</name>
+        <description>DMA</description>
         <description>DMA with separate read and write masters</description>
         <baseAddress>0x50000000</baseAddress>
         <addressBlock>
@@ -32559,6 +32577,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TIMER</name>
+        <description>TIMER</description>
         <description>Controls time and alarms 
             time is a 64 bit value indicating the time in usec since power-on 
             timeh is the top 32 bits of time &amp; timel is the bottom 32 bits 
@@ -32908,6 +32927,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PWM</name>
+        <description>PWM</description>
         <description>Simple PWM</description>
         <baseAddress>0x40050000</baseAddress>
         <addressBlock>
@@ -34280,6 +34300,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>ADC</name>
+        <description>ADC</description>
         <description>Control and data interface to SAR ADC</description>
         <baseAddress>0x4004c000</baseAddress>
         <addressBlock>
@@ -34549,6 +34570,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>I2C0</name>
+        <description>I2C0</description>
         <description>DW_apb_i2c address block
 
             List of configuration constants for the Synopsys I2C hardware (you may see references to these in I2C register header; these are *fixed* values, set at hardware design time):
@@ -37188,6 +37210,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SPI0</name>
+        <description>SPI0</description>
         <baseAddress>0x4003c000</baseAddress>
         <addressBlock>
             <offset>0</offset>
@@ -37610,6 +37633,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>PIO0</name>
+        <description>PIO0</description>
         <description>Programmable IO block</description>
         <baseAddress>0x50200000</baseAddress>
         <addressBlock>
@@ -39896,6 +39920,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>BUSCTRL</name>
+        <description>BUSCTRL</description>
         <description>Register block for busfabric control signals and performance counters</description>
         <baseAddress>0x40030000</baseAddress>
         <addressBlock>
@@ -40408,6 +40433,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>SIO</name>
+        <description>SIO</description>
         <description>Single-cycle IO block 
             Provides core-local and inter-core hardware for the two processors, with single-cycle access.</description>
         <baseAddress>0xd0000000</baseAddress>
@@ -42227,6 +42253,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>USB</name>
+        <description>USB</description>
         <description>USB FS/LS controller device registers</description>
         <baseAddress>0x50110000</baseAddress>
         <addressBlock>
@@ -44910,6 +44937,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>USB_DPRAM</name>
+        <description>USB_DPRAM</description>
         <description>DPRAM layout for USB device.</description>
         <baseAddress>0x50100000</baseAddress>
         <addressBlock>
@@ -50515,6 +50543,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>TBMAN</name>
+        <description>TBMAN</description>
         <description>Testbench manager. Allows the programmer to know what platform their software is running on.</description>
         <baseAddress>0x4006c000</baseAddress>
         <addressBlock>
@@ -50547,6 +50576,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>VREG_AND_CHIP_RESET</name>
+        <description>VREG_AND_CHIP_RESET</description>
         <description>control and status for on-chip voltage regulator and chip level reset subsystem</description>
         <baseAddress>0x40064000</baseAddress>
         <addressBlock>
@@ -50677,6 +50707,7 @@ SPDX-License-Identifier: BSD-3-Clause
     </peripheral>
     <peripheral>
         <name>RTC</name>
+        <description>RTC</description>
         <description>Register block to control RTC</description>
         <baseAddress>0x4005c000</baseAddress>
         <addressBlock>
