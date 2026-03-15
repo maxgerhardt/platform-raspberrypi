@@ -33,7 +33,13 @@ int pico_led_init(void) {
 #endif
     // colored status LED in addition to regular one
 #if defined (PICO_COLORED_STATUS_LED_AVAILABLE)
+#if defined(CYW43_WL_GPIO_LED_PIN)
+    /* in the WiFi case, we have called cyw43_arch_init() already and e.g. registered the IRQ for the WiFi chip */
+    /* we have to use this init function then to not do the initialization twice. otherwise this crashes. */
+    if(!status_led_init_with_context(cyw43_arch_async_context())) {
+#else
     if(!status_led_init()) {
+#endif
         printf("Failed to initialize status led!\n");
         return PICO_ERROR_IO;
     } else {
