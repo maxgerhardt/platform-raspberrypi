@@ -542,15 +542,21 @@ default_common_rp2_components = [
     ("pico_runtime_init", "+<*>"),
     ("pico_runtime", "+<*>"),
     ("pico_status_led", "+<*>"),
-    ("pico_stdio_rtt", "+<*>"),
-    ("pico_stdio_semihosting", "+<*>"),
-    ("pico_stdio_uart", "+<*>"),
-    ("pico_stdio_usb", "+<*>"),
     ("pico_stdio", "+<*>"),
     ("pico_stdlib", "+<*>"),
     ("pico_standard_binary_info", "+<*>"),
     ("pico_unique_id", "+<*>"),
 ]
+
+# multiple stdio implementations can be on at the same time!
+if "LIB_PICO_STDIO_USB" in flags:
+    default_common_rp2_components.append(("pico_stdio_usb", "+<*>"))
+if "LIB_PICO_STDIO_UART" in flags:
+    default_common_rp2_components.append(("pico_stdio_uart", "+<*>"))
+if "LIB_PICO_STDIO_SEMIHOSTING" in flags:
+    default_common_rp2_components.append(("pico_stdio_semihosting", "+<*>"))
+if "LIB_PICO_STDIO_RTT" in flags:
+    default_common_rp2_components.append(("pico_stdio_rtt", "+<*>"))
 
 if is_rp2350:
     default_common_rp2_components.extend(
