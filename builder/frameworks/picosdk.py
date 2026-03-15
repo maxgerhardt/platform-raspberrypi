@@ -360,10 +360,8 @@ flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
 
 # default to USB stdio if nothing else defined (or explicitly disabled)
 if not any(str(flag).startswith("PIO_STDIO") for flag in cpp_defines) and "PIO_STDIO_NONE" not in cpp_defines:
-    print("ADDING USB DEFAULT IMPL")
+    print("No stdio implementation defined, defaulting to USB.")
     cpp_defines.append("PIO_STDIO_USB")
-else:
-    print("USER OVERRIDE FOR STDIO IMPL, NOT ADDING DEFAULT")
 
 is_cyw43_board = any(str(flag).startswith("PICO_CYW43_SUPPORTED") for flag in cpp_defines)
 
@@ -431,7 +429,6 @@ def build_cyw43_arch():
     # not needed for non-CYW43 boards
     if not is_cyw43_board:
         return
-    print("GOING TO BUILD NETWORK STACK")
     env.Append(CPPPATH=[
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_arch", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_driver", "include"),
@@ -445,13 +442,7 @@ def build_cyw43_arch():
     ], CPPDEFINES=[
         ("PICO_CYW43_ARCH_THREADSAFE_BACKGROUND", "1"),
     ])
-    # see default_common_rp2_components = [
-    #  ("hardware_adc", "+<*>"),
-    components_to_build = [
-        ("pico_cyw43_arch", "+<*>"),
-        ("pico_cyw43_driver", "+<*>"),
-        ("cyw43-driver", "+<*>")
-    ]
+    # build pico_cyw43_arch
     env.BuildSources(
         join("$BUILD_DIR", "PicoSDKCyw43Arch"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_arch"),
@@ -475,10 +466,10 @@ def build_cyw43_arch():
     env.BuildSources(
         join("$BUILD_DIR", "Cyw43Driver"),
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "src"),
-        "+<*> -<*.S> -<*.s> -<cyw43_spi.c>" # already provided by mroe specialized cyw43_bus_pio_spi.c
+        "+<*> -<*.S> -<*.s> -<cyw43_spi.c>" # already provided by more specialized cyw43_bus_pio_spi.c
     )
 
-    # build rp2_common / pico_lwip, no pio files
+    # build rp2_common / pico_lwip
     env.BuildSources(
         join("$BUILD_DIR", "PicoSDKLwip"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_lwip"),
