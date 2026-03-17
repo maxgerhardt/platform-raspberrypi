@@ -412,7 +412,6 @@ def configure_printf_impl():
             flags.append(remap_dict[key])
             if "LIB_PICO_STDIO" not in flags:
                 flags.append("LIB_PICO_STDIO")
-    print("Flags: ", flags)
     # we definitely need tinyusb for this
     if "LIB_PICO_STDIO_USB" in flags:
         build_tinyusb()
