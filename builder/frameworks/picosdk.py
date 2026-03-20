@@ -516,6 +516,13 @@ else:
     # when calling into the RP2040 version of that script, it actually doesn't take a "-a" argument at all.
     pad_checksum_arch = ""
 
+current_defines = []
+for x in env["CPPDEFINES"]:
+    # can be a tuple (key, value) or just a key
+    if isinstance(x, tuple):
+        current_defines.append(f"-D{x[0]}={str(x[1])}")
+    else:
+        current_defines.append(f"-D{x}")
 gen_boot2_cmd = env.Command(
     join("$BUILD_DIR", "boot2.S"),  # $TARGET
     join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "compile_time_choice.S"),  # $SOURCE
@@ -525,7 +532,7 @@ gen_boot2_cmd = env.Command(
         #"$ASFLAGS",
         #"$CCFLAGS",
     ] 
-    + ["-D%s=%s" % (flag[0], str(flag[1])) for flag in env["CPPDEFINES"]] 
+    + current_defines
     + [
         "-I\"%s\"" % join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "asminclude"),
         "-I\"%s\"" % join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "include"),
