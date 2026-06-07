@@ -22,7 +22,7 @@
             ]
         ],
         "mcu": "rp2350",
-        "variant": "olimex_pico2bb48r"
+        "variant": "olimex_pico2bb48"
     },
     "debug": {
         "jlink_device": "RP2350_M33_0",
