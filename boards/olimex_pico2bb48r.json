@@ -33,7 +33,7 @@
         "arduino",
         "picosdk"
     ],
-    "name": "Pico2BB48",
+    "name": "Pico2BB48R",
     "upload": {
         "maximum_ram_size": 524288,
         "maximum_size": 16777216,
