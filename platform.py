@@ -172,8 +172,13 @@ class RaspberrypiPlatform(PlatformBase):
             # turned on in Newlib, which Mbed does not currently support.
             self.packages["toolchain-rp2040-earlephilhower"]["optional"] = True
             self.packages.pop("toolchain-rp2040-earlephilhower", None)
+
+            # CMake and Ninja are required
             self.packages["tool-cmake"]["optional"] = False
             self.packages["tool-ninja"]["optional"] = False
+
+            # It appears that CMSIS needs at least GCC 10 when compiling for RP2350 or we get an error about a missing intrinsic.
+            self.packages["toolchain-gccarmnoneeabi"]["version"] = ">=1.100301.220327"
         else:
             # this is a pico-sdk or baremetal project. if it's for a rp2350-riscv, we need the RISC-V toolchain.
             if chip == "rp2350-riscv":
