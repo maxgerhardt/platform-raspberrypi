@@ -185,6 +185,7 @@ def BeforeUpload(target, source, env):  # pylint: disable=W0613,W0621
 
 def generate_uf2(target, source, env):
     elf_file = target[0].get_path()
+    extra_flags = board.get("build.picotool_uf2_extra_flags", "").split(" ")
     env.Execute(
         " ".join(
             [
@@ -195,7 +196,7 @@ def generate_uf2(target, source, env):
                 "elf",
                 '"%s"' % elf_file,
                 '"%s"' % elf_file.replace(".elf", ".uf2")
-            ]
+            ] + extra_flags
         )
     )
 
