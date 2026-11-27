@@ -24,6 +24,10 @@ known_mappings: dict[str, str] = {
     "cytron_maker_pi_rp2040": "cytron_maker_pi_rp2040.h",
     "generic_rp2350": "pico2.h",
     "melopero_shake_rp2040": "melopero_shake_rp2040.h",
+    "newsan_archi": "archi.h",
+    "pimoroni_plasma2350w": "pimoroni_plasma2350_w.h",
+    "vccgnd_yd_rp2040": "vcc-gnd_yd-rp2040_16m.h",
+    "weact_rp2350b": "weact_studio_rp2350b_core.h",
     "nullbits_bit_c_pro": "nullbits_bit_c_pro.h",
     "pico": "pico.h",
     "pimoroni_pga2040": "pimoroni_pga2040.h",
@@ -102,9 +106,18 @@ if board.get("build.picosdk.board_header", "") != "":
     print("Using specified Pico-SDK board header: %s" % rp2_board_header)
 else:
     # is there a known mapping for this board?
+    sdk_boards_dir = join(FRAMEWORK_DIR, "src", "boards", "include", "boards")
+    # otherwise, the SDK may have a header with the same name as the board or its variant
+    same_name_header = next((
+        "%s.h" % name for name in (board.id, board.get("build.variant", ""))
+        if name and isfile(join(sdk_boards_dir, "%s.h" % name))
+    ), None)
     if board.id in known_mappings:
         rp2_board_header = known_mappings[board.id]
         print("Using known Pico-SDK board header for %s: %s" % (board.id, rp2_board_header))
+    elif same_name_header:
+        rp2_board_header = same_name_header
+        print("Using Pico-SDK board header for %s: %s" % (board.id, rp2_board_header))
     else:
         # fallback to either pico.h or pico2.h depending on rp2040 or rp2350
         rp2_board_header = "pico2.h" if is_rp2350 else "pico.h"
@@ -218,6 +231,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_base", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_boot_lock", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_clocks", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_dcp", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_divider", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_dma", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_exception", "include"),
@@ -270,7 +284,12 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_rtt", "SEGGER", "RTT"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_semihosting", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_stdio_uart", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_thread_local", "include"), # SDK >= 2.3.0
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_unique_id", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_usb_reset", "include"), # SDK >= 2.3.0
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rosc", "include"), # SDK >= 2.3.0
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_psram", "include"), # SDK >= 2.3.0, RP2350 only
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_low_power", "include"), # SDK >= 2.3.0
         # CMSIS only for ARM
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Core", "Include"),
@@ -321,6 +340,15 @@ env.Append(
 
 cpp_defines = env.Flatten(env.get("CPPDEFINES", []))
 
+def get_define_value(name, default=None):
+    # value of a -D macro from CPPDEFINES (build_flags, board), or default if not defined
+    for d in env.get("CPPDEFINES", []):
+        if isinstance(d, (tuple, list)) and len(d) >= 2 and d[0] == name:
+            return str(d[1])
+        if d == name:
+            return "1"
+    return default
+
 flags = []
 # configure default but overridable defines
 # todo figure this out from arduino-pico info? :))
@@ -328,51 +356,35 @@ if not "PICO_DEFAULT_BOOT_STAGE2_FILE" in cpp_defines:
     pass
 if not "PICO_DEFAULT_BOOT_STAGE2" in cpp_defines:
     pass
-if not "PIO_NO_MULTICORE" in cpp_defines:
+use_multicore = "PIO_NO_MULTICORE" not in cpp_defines
+if use_multicore:
+    # PICO_MULTICORE_ENABLED is the name of the SDK's Bazel config option. No SDK source reads it,
+    # but it's kept for compatibility with user code that may check it. What the SDK actually reads
+    # is LIB_PICO_MULTICORE (e.g. pico/flash.h, pico/malloc.h, async_context_threadsafe_background.h),
+    # which is emitted below together with the other LIB_<library> defines.
     flags.append(("PICO_MULTICORE_ENABLED", 1))
-# check selected double implementation
-double_impl = "auto"
-if "PIO_DEFAULT_DOUBLE_IMPL" in cpp_defines:
-    # should be auto, compiler, dcp, rp2040, none
-    double_impl = cpp_defines["PIO_DEFAULT_DOUBLE_IMPL"]
-float_impl = "auto"
-if "PIO_DEFAULT_FLOAT_IMPL" in cpp_defines:
-    # should be auto, compiler, dcp, rp2040, vfp, none
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
-divider_impl = "auto"
-if "PIO_DEFAULT_DIVIDER_IMPL" in cpp_defines:
-    # should be auto, hardware, compiler
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
-printf_impl = "pico"
-if "PIO_DEFAULT_PRINTF_IMPL" in cpp_defines:
-    # should be pico, compiler, none
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
+# pico_malloc wraps malloc/calloc/realloc/free and makes them multicore-safe (mutex), like in a CMake build.
+use_pico_malloc = "PIO_NO_PICO_MALLOC" not in cpp_defines
+# float / double / divider / int64_ops / bit_ops / mem_ops implementations: see "runtime support libraries" below
+# printf implementation: pico or compiler
+printf_impl = get_define_value("PIO_DEFAULT_PRINTF_IMPL", "pico")
 if not "PIO_NO_BINARY_INFO" in cpp_defines:
     flags.append(("PICO_BINARY_INFO_ENABLED", 1))
 
 if not "PIO_USE_DEFAULT_PAGE_SIZE" in cpp_defines:
     env.Append(LINKFLAGS=["-Wl,-z,max-page-size=4096"])
 
-timeout = 0
-if "PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS" in cpp_defines:
-    timeout = cpp_defines["PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS"]
+timeout = get_define_value("PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", 0)
 flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
 
 # default to USB stdio if nothing else defined (or explicitly disabled)
-if not any(str(flag).startswith("PIO_STDIO") for flag in cpp_defines) and "PIO_STDIO_NONE" not in cpp_defines:
+# (only the stdio selection flags count, not options like PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS)
+stdio_select_flags = ("PIO_STDIO_USB", "PIO_STDIO_UART", "PIO_STDIO_SEMIHOSTING", "PIO_STDIO_RTT", "PIO_STDIO_NONE")
+if not any(flag in cpp_defines for flag in stdio_select_flags):
     print("No stdio implementation defined, defaulting to USB.")
     cpp_defines.append("PIO_STDIO_USB")
 
 is_cyw43_board = any(str(flag).startswith("PICO_CYW43_SUPPORTED") for flag in cpp_defines)
-
-def build_double_library():
-    pass
-
-def build_float_library():
-    pass
-
-def build_divider_library():
-    pass
 
 # ToDo: this may also be triggered by other functions or configs.
 def build_tinyusb():
@@ -424,10 +436,96 @@ def configure_printf_impl():
         new_defines = [d for d in new_defines if not (isinstance(d, tuple) and d[0] == "USBD_MAX_POWER_MA")]
         env.Replace(CPPDEFINES=new_defines)
 
+def compile_gatt_files():
+    """Compile the project's .gatt files to $BUILD_DIR/generated/<name>.h (like pico_btstack_make_gatt_header)."""
+    compile_gatt = join(FRAMEWORK_DIR, "lib", "btstack", "tool", "compile_gatt.py")
+    for gatt_file in Path(env.subst("$PROJECT_SRC_DIR")).rglob("*.gatt"):
+        header_file = Path(genned_dir) / gatt_file.with_suffix(".h").name
+        if header_file.exists() and header_file.stat().st_mtime >= gatt_file.stat().st_mtime:
+            continue
+        action = env.VerboseAction(
+            '"$PYTHONEXE" "%s" "%s" "%s"' % (compile_gatt, str(gatt_file), str(header_file)),
+            "Generating %s" % str(header_file))
+        if env.Execute(action) != 0:
+            sys.stderr.write("Failed to compile GATT file %s\n" % str(gatt_file))
+            env.Exit(1)
+
+def build_btstack():
+    # opt-in BLE support: pico_btstack_ble + pico_btstack_cyw43 in a CMake build.
+    # The project has to provide a btstack_config.h, e.g. in its include/ folder.
+    btstack_dir = join(FRAMEWORK_DIR, "lib", "btstack")
+    env.Append(CPPPATH=[
+        btstack_dir,
+        join(btstack_dir, "3rd-party", "md5"),
+        join(btstack_dir, "3rd-party", "yxml"),
+        join(btstack_dir, "3rd-party", "rijndael"),
+        join(btstack_dir, "3rd-party", "micro-ecc"),
+        join(btstack_dir, "3rd-party", "segger-rtt"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_btstack", "include"),
+    ], CPPDEFINES=[
+        ("ENABLE_BLE", 1),
+        ("CYW43_ENABLE_BLUETOOTH", 1),
+        ("LIB_PICO_BTSTACK_BLE", 1),
+        ("LIB_PICO_BTSTACK_CYW43", 1),
+        ("LIB_PICO_BTSTACK_FLASH_BANK", 1),
+    ])
+    # pico_btstack_base
+    base_src = [
+        "3rd-party/micro-ecc/uECC.c",
+        "3rd-party/rijndael/rijndael.c",
+        "3rd-party/segger-rtt/SEGGER_RTT_printf.c",
+        "platform/embedded/btstack_tlv_flash_bank.c",
+        "platform/embedded/hci_dump_embedded_stdout.c",
+        "platform/embedded/hci_dump_segger_rtt_stdout.c",
+        "src/ad_parser.c", "src/btstack_audio.c", "src/btstack_base64_decoder.c", "src/btstack_crypto.c",
+        "src/btstack_hid.c", "src/btstack_hid_parser.c", "src/btstack_linked_list.c", "src/btstack_memory.c",
+        "src/btstack_memory_pool.c", "src/btstack_resample.c", "src/btstack_ring_buffer.c", "src/btstack_run_loop.c",
+        "src/btstack_run_loop_base.c", "src/btstack_slip.c", "src/btstack_tlv.c", "src/btstack_tlv_none.c",
+        "src/btstack_util.c", "src/hci.c", "src/hci_cmd.c", "src/hci_dump.c", "src/hci_event.c", "src/l2cap.c",
+        "src/l2cap_signaling.c", "3rd-party/md5/md5.c", "3rd-party/yxml/yxml.c",
+    ]
+    # SEGGER_RTT.c is already part of pico_stdio_rtt
+    if "LIB_PICO_STDIO_RTT" not in flags:
+        base_src.append("3rd-party/segger-rtt/SEGGER_RTT.c")
+    # pico_btstack_ble
+    ble_src = [
+        "src/ble/att_db.c", "src/ble/att_db_util.c", "src/ble/att_dispatch.c", "src/ble/att_server.c",
+        "src/ble/gatt-service/battery_service_server.c", "src/ble/gatt-service/battery_service_client.c",
+        "src/ble/gatt-service/cycling_power_service_server.c",
+        "src/ble/gatt-service/cycling_speed_and_cadence_service_server.c",
+        "src/ble/gatt-service/device_information_service_server.c",
+        "src/ble/gatt-service/device_information_service_client.c",
+        "src/ble/gatt-service/heart_rate_service_server.c", "src/ble/gatt-service/hids_device.c",
+        "src/ble/gatt-service/nordic_spp_service_server.c", "src/ble/gatt-service/ublox_spp_service_server.c",
+        "src/ble/gatt-service/ancs_client.c", "src/ble/gatt_client.c", "src/ble/le_device_db_memory.c",
+        "src/ble/le_device_db_tlv.c", "src/ble/sm.c",
+    ]
+    if isfile(join(btstack_dir, "src", "hci_event_builder.c")):
+        ble_src.append("src/hci_event_builder.c")
+    if isfile(join(btstack_dir, "src", "ble", "gatt-service", "hids_host.c")):
+        ble_src += ["src/ble/gatt-service/hids_host.c", "src/ble/gatt_service_client.c"]
+    else:
+        ble_src.append("src/ble/gatt-service/hids_client.c")
+    env.BuildSources(
+        join("$BUILD_DIR", "BTstack"),
+        btstack_dir,
+        "-<*> " + " ".join("+<%s>" % f for f in base_src + ble_src)
+    )
+    # pico_btstack_flash_bank, pico_btstack_run_loop_async_context and btstack_stdin_pico.c (pico_btstack_base)
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKBTstack"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_btstack"),
+        "-<*> +<btstack_flash_bank.c> +<btstack_run_loop_async_context.c> +<btstack_stdin_pico.c>"
+    )
+    compile_gatt_files()
+
 def build_cyw43_arch():
     # not needed for non-CYW43 boards
     if not is_cyw43_board:
         return
+    # -D CYW43_LWIP=0 is what pico_cyw43_arch_none does: WiFi driver without lwIP (e.g. for BLE only)
+    use_lwip = get_define_value("CYW43_LWIP", "1") != "0"
+    use_btstack = "PIO_USE_BTSTACK_BLE" in cpp_defines
     env.Append(CPPPATH=[
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_arch", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_driver", "include"),
@@ -436,7 +534,11 @@ def build_cyw43_arch():
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "src"),
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "firmware"),
         join(FRAMEWORK_DIR, "lib", "lwip", "src", "include"),
-        # has lwipopts.h
+        # The project's include/ folder comes first, so that an lwipopts.h (and mbedtls_config.h) from the
+        # project is used for the SDK / lwIP sources too, not only for the project's own sources.
+        # PlatformIO itself only adds it to the environment that builds the project sources.
+        "$PROJECT_INCLUDE_DIR",
+        # fallback lwipopts.h if the project doesn't provide one
         join(FRAMEWORK_DIR, "lib", "btstack", "platform", "lwip", "port")
     ], CPPDEFINES=[
         ("PICO_CYW43_ARCH_THREADSAFE_BACKGROUND", "1"),
@@ -456,10 +558,18 @@ def build_cyw43_arch():
     # build pico_cyw43_driver, has .pio file
     comp_build_dir = join("$BUILD_DIR", "PicoSDKPicoCYW43Driver")
     comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_driver")
-    src_filter = "+<*.c> -<*.S> -<*.s> -<btstack_cyw43.c> -<btstack_hci_transport_cyw43.c>" # only needed if btstack is on
+    src_filter = "+<*.c> -<*.S> -<*.s>"
+    if use_btstack:
+        # cybt_shared_bus: the Bluetooth part of the WiFi chip's bus driver
+        src_filter += " +<cybt_shared_bus/*.c>"
+    else:
+        # pico_btstack_cyw43 / pico_btstack_hci_transport_cyw43, only needed if btstack is on
+        src_filter += " -<btstack_cyw43.c> -<btstack_hci_transport_cyw43.c> -<btstack_chipset_cyw43.c>"
     pio_headers = preprocess_pio_sources(comp_src_dir)
     c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
     env.Depends(c_nodes, pio_headers)
+    if use_btstack:
+        build_btstack()
 
     # build lib/cyw43-driver, regularly.
     env.BuildSources(
@@ -467,6 +577,9 @@ def build_cyw43_arch():
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "src"),
         "+<*> -<*.S> -<*.s> -<cyw43_spi.c>" # already provided by more specialized cyw43_bus_pio_spi.c
     )
+
+    if not use_lwip:
+        return
 
     # build rp2_common / pico_lwip
     env.BuildSources(
@@ -484,11 +597,63 @@ def build_cyw43_arch():
     )
 
 
-build_double_library()
-build_float_library()
-build_divider_library()
+def build_mbedtls():
+    # opt-in, like linking pico_mbedtls (and pico_lwip_mbedtls) in a CMake build.
+    # The project has to provide a mbedtls_config.h, e.g. in its include/ folder.
+    if "PIO_USE_MBEDTLS" not in cpp_defines:
+        return
+    mbedtls_dir = join(FRAMEWORK_DIR, "lib", "mbedtls")
+    if isfile(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls", "include", "pico_mbedtls_config.h")):
+        # SDK >= 2.0 with mbedtls 3.x: wrapper that includes the project's mbedtls_config.h
+        mbedtls_config_file = "pico_mbedtls_config.h"
+    else:
+        mbedtls_config_file = "mbedtls_config.h"
+    env.AppendUnique(CPPPATH=[
+        "$PROJECT_INCLUDE_DIR",
+        join(mbedtls_dir, "include"),
+        join(mbedtls_dir, "library"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls", "include"),
+    ])
+    env.Append(CPPDEFINES=[("MBEDTLS_CONFIG_FILE", "\\\"%s\\\"" % mbedtls_config_file)])
+    # pico_mbedtls_crypto + pico_mbedtls_x509 + pico_mbedtls_tls: that's all of library/*.c
+    env.BuildSources(
+        join("$BUILD_DIR", "MbedTLS"),
+        join(mbedtls_dir, "library"),
+        "-<*> +<*.c>"
+    )
+    # pico_mbedtls: hardware entropy, time and (RP2350) SHA-256 acceleration glue
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKMbedTLS"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls"),
+        "-<*> +<pico_mbedtls.c>"
+    )
+    if not is_cyw43_board or get_define_value("CYW43_LWIP", "1") == "0":
+        return
+    # pico_lwip_mbedtls: TLS for lwIP's altcp API
+    env.Append(CPPPATH=[join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls")])
+    env.BuildSources(
+        join("$BUILD_DIR", "LwipAltcpTls"),
+        join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls"),
+        "-<*> +<altcp_tls_mbedtls_mem.c>"
+    )
+    # lwIP's own altcp_tls_mbedtls.c doesn't support mbedtls 3.x, the SDK ships a patched one
+    if isfile(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_lwip", "altcp_tls_mbedtls.c")) \
+            and isfile(join(mbedtls_dir, "library", "ssl_client.c")):
+        env.BuildSources(
+            join("$BUILD_DIR", "PicoSDKLwipMbedTLS"),
+            join(FRAMEWORK_DIR, "src", "rp2_common", "pico_lwip"),
+            "-<*> +<altcp_tls_mbedtls.c>"
+        )
+    else:
+        env.BuildSources(
+            join("$BUILD_DIR", "LwipAltcpTlsMbedTLS"),
+            join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls"),
+            "-<*> +<altcp_tls_mbedtls.c>"
+        )
+
 configure_printf_impl()
 build_cyw43_arch()
+build_mbedtls()
 
 # default false, only mentioned here:
 # PICO_CXX_ENABLE_EXCEPTIONS
@@ -502,7 +667,27 @@ env.Append(CPPDEFINES=flags)
 flash_region = "FLASH(rx) : ORIGIN = 0x10000000, LENGTH = %s\n" % str(board.get("upload.maximum_size"))
 Path(join(genned_dir, "pico_flash_region.ld")).write_text(flash_region)
 
-env.Replace(LDSCRIPT_PATH=join(FRAMEWORK_DIR, "src", "rp2_common", "pico_crt0", mcu, "memmap_default.ld"))
+# SDK >= 2.3.0 moved the linker scripts to src/<mcu>/pico_platform and split them into
+# INCLUDE'd fragments, found via the linker search path. Older SDKs have a monolithic script in pico_crt0.
+new_memmap = join(FRAMEWORK_DIR, "src", mcu, "pico_platform", "memmap_default.ld")
+if isfile(new_memmap):
+    # pico_standard_link generates this one too; like there, no PSRAM region by default (PICO_PSRAM_SIZE_BYTES unset).
+    Path(join(genned_dir, "pico_psram_region.ld")).write_text("PSRAM(rwx) : ORIGIN = 0x11000000, LENGTH = 0\n")
+    # Same search order as pico_standard_link: platform fragments first (they override the common ones),
+    # then the common fragments, then the generated region files (already in LIBPATH).
+    env.Prepend(LIBPATH=[
+        join(FRAMEWORK_DIR, "src", mcu, "pico_platform", "script_include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_standard_link", "script_include"),
+    ])
+    # CMake passes default_locations.ld as an extra --script before the memmap. PlatformIO always puts
+    # -T <LDSCRIPT_PATH> first, so use a wrapper script that includes both in the right order.
+    Path(join(genned_dir, "memmap_default_pio.ld")).write_text(
+        "/* Generated by PlatformIO */\nINCLUDE \"default_locations.ld\"\nINCLUDE \"memmap_default.ld\"\n"
+    )
+    env.Prepend(LIBPATH=[join(FRAMEWORK_DIR, "src", mcu, "pico_platform")])
+    env.Replace(LDSCRIPT_PATH=join(genned_dir, "memmap_default_pio.ld"))
+else:
+    env.Replace(LDSCRIPT_PATH=join(FRAMEWORK_DIR, "src", "rp2_common", "pico_crt0", mcu, "memmap_default.ld"))
 
 # build base files
 # system_RP2040.c
@@ -510,11 +695,16 @@ env.Replace(LDSCRIPT_PATH=join(FRAMEWORK_DIR, "src", "rp2_common", "pico_crt0", 
 #     join("$BUILD_DIR", "PicoSDK"),
 #     join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Device", "RP2040", "Source")
 # )
+pad_script = join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "pad_checksum")
+pad_args = ["-s 0xffffffff"]
 if is_rp2350:
-    pad_checksum_arch = "-a riscv" if is_riscv else "-a arm"
-else:
-    # when calling into the RP2040 version of that script, it actually doesn't take a "-a" argument at all.
-    pad_checksum_arch = ""
+    if isfile(join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "pad")):
+        # SDK >= 2.3.0: RP2350 boot2 is only padded, not checksummed; no seed or arch arguments.
+        pad_script = join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "pad")
+        pad_args = []
+    else:
+        pad_args.append("-a riscv" if is_riscv else "-a arm")
+# the RP2040 version of pad_checksum doesn't take an "-a" argument at all.
 
 current_defines = []
 for x in env["CPPDEFINES"]:
@@ -560,9 +750,8 @@ gen_boot2_cmd = env.Command(
         join("$BUILD_DIR", "boot2.bin")
     ] + [ " && "] + [
         "$PYTHONEXE",
-        join(FRAMEWORK_DIR, "src", mcu, "boot_stage2", "pad_checksum"),
-        "-s 0xffffffff",
-        pad_checksum_arch,
+        "\"%s\"" % pad_script,
+    ] + pad_args + [
         join("$BUILD_DIR", "boot2.bin"),
         join("$BUILD_DIR", "boot2.S"),
     ]), "Generating boot2 $BUILD_DIR/boot2.S")
@@ -599,10 +788,10 @@ default_common_rp2_components = [
     ("pico_atomic", "+<*>"),
     ("pico_bootrom", "+<*>"),
     ("pico_bootsel_via_double_reset", "+<*>"),
-    ("pico_clib_interface", "-<*> +<newlib_interface.c>"),
+    # cxa_guard.c (thread-safe C++ static init) only exists in SDK >= 2.3.0; the filter ignores it otherwise
+    ("pico_clib_interface", "-<*> +<newlib_interface.c> +<cxa_guard.c>"),
     ("pico_flash", "+<*>"),
     ("pico_i2c_slave", "+<*>"),
-    #("pico_malloc", "+<*>"),  # needs additional linker wrapper flags for malloc, calloc, realloc and free
     ("pico_multicore", "+<*>"),
     ("pico_platform_panic", "+<*>"),
     ("pico_rand", "+<*>"),
@@ -615,9 +804,203 @@ default_common_rp2_components = [
     ("pico_unique_id", "+<*>"),
 ]
 
+if use_pico_malloc:
+    default_common_rp2_components.append(("pico_malloc", "+<*>"))
+    env.Append(LINKFLAGS=[
+        "-Wl,--wrap=malloc",
+        "-Wl,--wrap=calloc",
+        "-Wl,--wrap=realloc",
+        "-Wl,--wrap=free",
+    ])
+
+# ---- runtime support libraries, linked by pico_runtime in a CMake build ----
+# Each has an implementation that can be chosen with -D PIO_DEFAULT_<LIB>_IMPL=<impl>, like PICO_DEFAULT_<LIB>_IMPL.
+# "pico" (default) uses the SDK's optimized versions (RP2040 bootrom routines, RP2350 VFP / double coprocessor (DCP),
+# Hazard3 assembly), "compiler" uses the compiler's libgcc / C library versions.
+is_rp2040 = not is_rp2350
+
+def wrap_functions(names):
+    env.Append(LINKFLAGS=["-Wl,--wrap=%s" % n for n in names])
+
+def select_impl(lib, allowed):
+    impl = get_define_value("PIO_DEFAULT_%s_IMPL" % lib.upper(), "pico")
+    if impl == "auto":
+        impl = "pico"
+    if impl not in allowed:
+        sys.stderr.write("Unsupported PIO_DEFAULT_%s_IMPL '%s' for %s (supported: %s)\n" % (
+            lib.upper(), impl, board.get("build.mcu"), ", ".join(allowed)))
+        env.Exit(-1)
+    return impl
+
+def add_runtime_lib(name, src_filter, impl_define=None):
+    default_common_rp2_components.append((name, src_filter))
+    if impl_define:
+        env.Append(CPPDEFINES=[(impl_define, 1)])
+
+float_aeabi_arith = ["__aeabi_fadd", "__aeabi_fdiv", "__aeabi_fmul", "__aeabi_frsub", "__aeabi_fsub"]
+float_aeabi_cmp = ["__aeabi_cfcmpeq", "__aeabi_cfrcmple", "__aeabi_cfcmple", "__aeabi_fcmpeq", "__aeabi_fcmplt",
+                   "__aeabi_fcmple", "__aeabi_fcmpge", "__aeabi_fcmpgt", "__aeabi_fcmpun"]
+float_aeabi_conv32 = ["__aeabi_i2f", "__aeabi_ui2f", "__aeabi_f2iz", "__aeabi_f2uiz"]
+float_aeabi_conv64 = ["__aeabi_l2f", "__aeabi_ul2f", "__aeabi_f2lz", "__aeabi_f2ulz"]
+float_aeabi_conv_double = ["__aeabi_f2d"]
+float_sci = ["cosf", "sinf", "tanf", "atan2f", "expf", "logf", "sincosf"]
+float_sci_extra = ["ldexpf", "copysignf", "truncf", "floorf", "ceilf", "roundf", "asinf", "acosf", "atanf", "sinhf",
+                   "coshf", "tanhf", "asinhf", "acoshf", "atanhf", "exp2f", "log2f", "exp10f", "log10f", "powf",
+                   "powintf", "hypotf", "cbrtf", "fmodf", "dremf", "remainderf", "remquof", "expm1f", "log1pf"]
+float_all = (float_aeabi_arith + float_aeabi_cmp + float_aeabi_conv32 + float_aeabi_conv64 + float_aeabi_conv_double
+             + ["sqrtf"] + float_sci + float_sci_extra + ["fmaf"])
+double_all = [
+    "__aeabi_dadd", "__aeabi_ddiv", "__aeabi_dmul", "__aeabi_drsub", "__aeabi_dsub",
+    "__aeabi_cdcmpeq", "__aeabi_cdrcmple", "__aeabi_cdcmple", "__aeabi_dcmpeq", "__aeabi_dcmplt", "__aeabi_dcmple",
+    "__aeabi_dcmpge", "__aeabi_dcmpgt", "__aeabi_dcmpun",
+    "__aeabi_i2d", "__aeabi_ui2d", "__aeabi_d2iz", "__aeabi_d2uiz",
+    "__aeabi_l2d", "__aeabi_ul2d", "__aeabi_d2lz", "__aeabi_d2ulz", "__aeabi_d2f",
+    "sqrt", "cos", "sin", "tan", "atan2", "exp", "log", "sincos",
+    "ldexp", "copysign", "trunc", "floor", "ceil", "round", "asin", "acos", "atan", "sinh", "cosh", "tanh", "asinh",
+    "acosh", "atanh", "exp2", "log2", "exp10", "log10", "pow", "powint", "hypot", "cbrt", "fmod", "drem",
+    "remainder", "remquo", "expm1", "log1p", "fma",
+]
+
+# pico_float
+if is_riscv:
+    float_impl = select_impl("float", ["pico", "compiler", "none"])
+else:
+    # no "none" on RP2350 Arm: the hard float ABI uses the FPU directly
+    float_impl = select_impl("float", ["pico", "compiler"] + (["none"] if is_rp2040 else []))
+if float_impl == "pico":
+    if is_rp2040:
+        add_runtime_lib("pico_float", "-<*> +<float_aeabi_rp2040.S> +<float_init_rom_rp2040.c> +<float_math.c> "
+                        "+<float_v1_rom_shim_rp2040.S>", "LIB_PICO_FLOAT_PICO")
+        wrap_functions(float_all)
+    elif not is_riscv:
+        # pico_float_pico_vfp: arithmetic, compares, 32-bit conversions, sqrtf and fmaf are VFP instructions
+        add_runtime_lib("pico_float", "-<*> +<float_math.c> +<float_conv32_vfp.S> +<float_common_m33.S> "
+                        "+<float_sci_m33_vfp.S>", "LIB_PICO_FLOAT_PICO")
+        env.Append(CPPDEFINES=[("LIB_PICO_FLOAT_PICO_VFP", 1)], CCFLAGS=["-fno-math-errno"])
+        wrap_functions(float_aeabi_conv64 + float_sci + float_sci_extra)
+    else:
+        # Hazard3: provides the libgcc soft float functions directly, no wrapping
+        add_runtime_lib("pico_float", "-<*> +<float_single_hazard3.S>", "LIB_PICO_FLOAT_PICO")
+elif float_impl == "none":
+    add_runtime_lib("pico_float", "-<*> +<float_none.S>", "LIB_PICO_FLOAT_NONE")
+    wrap_functions(float_all)
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_FLOAT", 1), ("LIB_PICO_FLOAT_COMPILER", 1)])
+
+# pico_double (the SDK has no optimized double implementation for RISC-V, so "pico" means "compiler" there)
+double_impl = select_impl("double", ["pico", "compiler", "none"])
+if double_impl == "pico" and is_riscv:
+    double_impl = "compiler"
+if double_impl == "pico":
+    if is_rp2040:
+        add_runtime_lib("pico_double", "-<*> +<double_aeabi_rp2040.S> +<double_init_rom_rp2040.c> +<double_math.c> "
+                        "+<double_v1_rom_shim_rp2040.S>", "LIB_PICO_DOUBLE_PICO")
+    else:
+        add_runtime_lib("pico_double", "-<*> +<double_math.c> +<double_aeabi_dcp.S> +<double_fma_dcp.S> "
+                        "+<double_sci_m33.S> +<double_conv_m33.S>", "LIB_PICO_DOUBLE_PICO")
+        env.Append(CPPDEFINES=[("LIB_PICO_DOUBLE_PICO_DCP", 1)])
+    wrap_functions(double_all)
+elif double_impl == "none":
+    add_runtime_lib("pico_double", "-<*> +<double_none.S>", "LIB_PICO_DOUBLE_NONE")
+    # printing floats/doubles won't work, so save the space
+    env.Append(CPPDEFINES=[("PICO_PRINTF_SUPPORT_FLOAT", 0)])
+    wrap_functions(double_all)
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_DOUBLE", 1), ("LIB_PICO_DOUBLE_COMPILER", 1)])
+
+# pico_divider (+ hardware_divider): RP2040 has a memory-mapped hardware divider, RP2350 has divide instructions
+divider_impl = select_impl("divider", ["pico", "hardware", "compiler"] if is_rp2040 else ["pico", "compiler"])
+if is_rp2040:
+    add_runtime_lib("hardware_divider", "-<*> +<divider.c>")
+    default_common_rp2_components.append(("hardware_divider", "-<*> +<divider.S>", "_asm"))
+if is_rp2040 and divider_impl in ("pico", "hardware"):
+    add_runtime_lib("pico_divider", "-<*> +<divider_hardware.S>", "LIB_PICO_DIVIDER_HARDWARE")
+    wrap_functions(["__aeabi_idiv", "__aeabi_idivmod", "__aeabi_ldivmod",
+                    "__aeabi_uidiv", "__aeabi_uidivmod", "__aeabi_uldivmod"])
+else:
+    add_runtime_lib("pico_divider", "-<*> +<divider_compiler.c>", "LIB_PICO_DIVIDER_COMPILER")
+
+# pico_int64_ops: RP2040 only
+int64_ops_impl = select_impl("int64_ops", ["pico", "compiler"])
+if is_rp2040 and int64_ops_impl == "pico":
+    add_runtime_lib("pico_int64_ops", "-<*> +<pico_int64_ops_aeabi.S>", "LIB_PICO_INT64_OPS_PICO")
+    wrap_functions(["__aeabi_lmul"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_INT64_OPS", 1), ("LIB_PICO_INT64_OPS_COMPILER", 1)])
+
+# pico_bit_ops
+bit_ops_impl = select_impl("bit_ops", ["pico", "compiler"])
+if bit_ops_impl == "pico":
+    add_runtime_lib("pico_bit_ops", "-<*> +<bit_ops_aeabi.S>", "LIB_PICO_BIT_OPS_PICO")
+    if is_rp2040:
+        wrap_functions(["__clzdi2", "__ctzsi2", "__popcountsi2", "__popcountdi2", "__clz", "__clzl", "__clzsi2",
+                        "__clzll"])
+    wrap_functions(["__ctzdi2"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_BIT_OPS", 1), ("LIB_PICO_BIT_OPS_COMPILER", 1)])
+
+# pico_mem_ops: RP2040 only (bootrom memcpy/memset)
+mem_ops_impl = select_impl("mem_ops", ["pico", "compiler"])
+if is_rp2040 and mem_ops_impl == "pico":
+    add_runtime_lib("pico_mem_ops", "-<*> +<mem_ops_aeabi.S>", "LIB_PICO_MEM_OPS_PICO")
+    wrap_functions(["memcpy", "memset", "__aeabi_memcpy", "__aeabi_memset", "__aeabi_memcpy4", "__aeabi_memset4",
+                    "__aeabi_memcpy8", "__aeabi_memset8"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_MEM_OPS", 1), ("LIB_PICO_MEM_OPS_COMPILER", 1)])
+
+# pico_cxx_options: plain malloc/free based operator new/delete (the builder already compiles C++ with
+# -fno-exceptions -fno-rtti), and pico_platform_common (linked by pico_platform)
+default_common_rp2_components.extend([
+    ("pico_cxx_options", "-<*> +<new_delete.cpp>"),
+    ("pico_platform_common", "+<*>"),
+])
+
+# Libraries that are not linked by default in CMake but were impossible to use here (sources never compiled).
+# Compiling them is harmless: unused functions are removed by --gc-sections.
+default_common_rp2_components.extend([
+    ("hardware_rosc", "+<*>"),
+    ("pico_low_power", "-<*> +<low_power.c>"),
+])
+if is_riscv:
+    # hardware_exception replaces crt0's machine exception handler with its own table on RISC-V.
+    # Only included when requested, as that's a global change.
+    if "PIO_USE_HARDWARE_EXCEPTION" in cpp_defines:
+        default_common_rp2_components.append(("hardware_exception", "+<*>"))
+        env.Append(CPPDEFINES=[("PICO_CRT0_NO_ISR_RISCV_MACHINE_EXCEPTION", 1)])
+else:
+    default_common_rp2_components.append(("hardware_exception", "-<*> +<exception.c>"))
+if is_rp2350:
+    default_common_rp2_components.append(("hardware_psram", "+<*>"))
+
+# printf implementation, like pico_printf / pico_stdio in a CMake build. Default "pico" (pico_printf_pico): the SDK's
+# own printf with float support, output through pico_stdio. "compiler" keeps the C library's printf (newlib-nano, no %f).
+if printf_impl == "pico":
+    default_common_rp2_components.append(("pico_printf", "-<*> +<printf.c>"))
+    env.Append(
+        CPPDEFINES=[("LIB_PICO_PRINTF_PICO", 1)],
+        LINKFLAGS=["-Wl,--wrap=%s" % f for f in (
+            "sprintf", "snprintf", "vsnprintf",                   # pico_printf
+            "printf", "vprintf", "puts", "putchar", "getchar",    # pico_stdio
+        )]
+    )
+elif printf_impl == "compiler":
+    env.Append(CPPDEFINES=[("LIB_PICO_PRINTF_COMPILER", 1)])
+else:
+    sys.stderr.write("Unsupported PIO_DEFAULT_PRINTF_IMPL '%s' (supported: pico, compiler)\n" % printf_impl)
+    env.Exit(-1)
+
+# SDK >= 2.3.0: pico_runtime links pico_thread_local (default implementation: per_thread)
+if isdir(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_thread_local")):
+    default_common_rp2_components.append(("pico_thread_local", "+<*>"))
+    if not any(str(d).startswith("PICO_THREAD_LOCAL_MODE_") for d in cpp_defines):
+        env.Append(CPPDEFINES=[("PICO_THREAD_LOCAL_MODE_PER_THREAD", 1)])
+
 # multiple stdio implementations can be on at the same time!
 if "LIB_PICO_STDIO_USB" in flags:
     default_common_rp2_components.append(("pico_stdio_usb", "+<*>"))
+    # SDK >= 2.3.0 moved the USB reset interface out of pico_stdio_usb
+    if isdir(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_usb_reset")):
+        default_common_rp2_components.append(("pico_usb_reset", "+<*>"))
 if "LIB_PICO_STDIO_UART" in flags:
     default_common_rp2_components.append(("pico_stdio_uart", "+<*>"))
 if "LIB_PICO_STDIO_SEMIHOSTING" in flags:
@@ -651,15 +1034,50 @@ else:
             join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rtc", "include"),        
     ])
 
+default_common_components = [
+    ("pico_time", "+<*>"),
+    ("pico_util", "+<*>"),
+    ("pico_sync", "+<*>"),
+    ("hardware_claim", "+<*>"),
+]
+
+# Like pico_add_library() in a CMake build, every SDK library that is part of the build gets a global
+# LIB_<LIBRARY>=1 define. The SDK uses these to detect which other libraries are present, e.g.
+# LIB_PICO_MULTICORE makes flash_safe_execute() pause the other core and pico_malloc take a mutex.
+# Libraries created with NOFLAG in CMake don't get one.
+# Note: LIB_TINYUSB_DEVICE / LIB_TINYUSB_HOST are deliberately not set; they'd compile pico_stdio_usb out.
+lib_defines_noflag = {"pico_thread_local"}
+# components that don't exist in the installed SDK version (e.g. added in 2.3.0) are skipped
+default_common_rp2_components = [
+    e for e in default_common_rp2_components if isdir(join(FRAMEWORK_DIR, "src", "rp2_common", e[0]))
+]
+lib_defines = []
+for e in default_common_rp2_components + default_common_components:
+    if e[0] not in lib_defines_noflag and e[0] not in lib_defines:
+        lib_defines.append(e[0])
+if not use_multicore:
+    # pico_multicore is still compiled (for API compatibility), but the SDK treats the build as single-core.
+    lib_defines.remove("pico_multicore")
+lib_flags = []
+for lib in lib_defines:
+    name = "LIB_" + lib.upper()
+    # don't duplicate or override what's already defined (e.g. LIB_PICO_STDIO_USB, or user build_flags)
+    if name not in cpp_defines and name not in flags:
+        lib_flags.append((name, 1))
+env.Append(CPPDEFINES=lib_flags)
+
 env.BuildSources(
     join("$BUILD_DIR", "PicoSDKPlatform"),
     join(FRAMEWORK_DIR, "src", mcu, "pico_platform"),
     "-<*> +<*.c>"
 )
 
-for component, src_filter in default_common_rp2_components:
+# entries are (component, src_filter) or (component, src_filter, build_dir_suffix), the latter for components
+# whose sources must go to separate build folders (e.g. divider.S and divider.c would both become divider.o)
+for entry in default_common_rp2_components:
+    component, src_filter = entry[0], entry[1]
     comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", component)
-    comp_build_dir = join("$BUILD_DIR", "PicoSDK%s" % component)
+    comp_build_dir = join("$BUILD_DIR", "PicoSDK%s%s" % (component, entry[2] if len(entry) > 2 else ""))
 
     pio_headers = preprocess_pio_sources(comp_src_dir)
     c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
@@ -674,12 +1092,6 @@ env.BuildSources(
     "-<*> +<%s>" % pico_crt0
 )
 
-default_common_components = [
-    ("pico_time", "+<*>"),
-    ("pico_util", "+<*>"),
-    ("pico_sync", "+<*>"),
-    ("hardware_claim", "+<*>"),
-]
 for component, src_filter in default_common_components:
     env.BuildSources(
         join("$BUILD_DIR", "PicoSDKCommon%s" % component),

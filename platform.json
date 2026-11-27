@@ -70,7 +70,7 @@
       "type": "framework",
       "optional": true,
       "owner": "platformio",
-      "version": "https://github.com/maxgerhardt/pico-sdk.git#4315984000afe20ac82c78c597a3c4a591f524b0"
+      "version": "https://github.com/maxgerhardt/pico-sdk.git#287a9540983e0d2326802a5e8e49fe5ff8907770"
     },
     "framework-mbed-ce": {
       "type": "framework",
