@@ -185,6 +185,7 @@ def BeforeUpload(target, source, env):  # pylint: disable=W0613,W0621
 
 def generate_uf2(target, source, env):
     elf_file = target[0].get_path()
+    extra_flags = board.get("build.picotool_uf2_extra_flags", "").split(" ")
     env.Execute(
         " ".join(
             [
@@ -195,7 +196,7 @@ def generate_uf2(target, source, env):
                 "elf",
                 '"%s"' % elf_file,
                 '"%s"' % elf_file.replace(".elf", ".uf2")
-            ]
+            ] + extra_flags
         )
     )
 
@@ -900,7 +901,19 @@ def concat_firmware_and_filesystem_to_one_uf2(target, source, env):
     filesystem_bin = join(env.subst("$BUILD_DIR"), env.get("PICO_FS_IMAGE_NAME", "littlefs") + ".bin")
     # convert filesystem .bin to .uf2
     filesystem_uf2 = filesystem_bin.replace(".bin", ".uf2")
-    env.Execute(" ".join(["picotool", "uf2", "convert", '"%s"' % filesystem_bin, '"%s"' % filesystem_uf2, "--offset", hex(env["FS_START"])]))
+    extra_flags = board.get("build.picotool_uf2_extra_flags", "").split(" ")
+    env.Execute(
+        " ".join(
+            [
+                "picotool",
+                "uf2",
+                "convert",
+                '"%s"' % filesystem_bin,
+                '"%s"' % filesystem_uf2,
+                "--offset", hex(env["FS_START"])
+            ] + extra_flags
+        )
+    )
     if not isfile(firmware_uf2):
         print("Error: Cannot find firmware UF2 file %s" % firmware_uf2)
         env.Exit(1)
