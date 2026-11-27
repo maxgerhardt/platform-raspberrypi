@@ -323,6 +323,15 @@ env.Append(
 
 cpp_defines = env.Flatten(env.get("CPPDEFINES", []))
 
+def get_define_value(name, default=None):
+    # value of a -D macro from CPPDEFINES (build_flags, board), or default if not defined
+    for d in env.get("CPPDEFINES", []):
+        if isinstance(d, (tuple, list)) and len(d) >= 2 and d[0] == name:
+            return str(d[1])
+        if d == name:
+            return "1"
+    return default
+
 flags = []
 # configure default but overridable defines
 # todo figure this out from arduino-pico info? :))
@@ -340,35 +349,27 @@ if use_multicore:
 # pico_malloc wraps malloc/calloc/realloc/free and makes them multicore-safe (mutex), like in a CMake build.
 use_pico_malloc = "PIO_NO_PICO_MALLOC" not in cpp_defines
 # check selected double implementation
-double_impl = "auto"
-if "PIO_DEFAULT_DOUBLE_IMPL" in cpp_defines:
-    # should be auto, compiler, dcp, rp2040, none
-    double_impl = cpp_defines["PIO_DEFAULT_DOUBLE_IMPL"]
-float_impl = "auto"
-if "PIO_DEFAULT_FLOAT_IMPL" in cpp_defines:
-    # should be auto, compiler, dcp, rp2040, vfp, none
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
-divider_impl = "auto"
-if "PIO_DEFAULT_DIVIDER_IMPL" in cpp_defines:
-    # should be auto, hardware, compiler
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
-printf_impl = "pico"
-if "PIO_DEFAULT_PRINTF_IMPL" in cpp_defines:
-    # should be pico, compiler, none
-    float_impl = cpp_defines["PIO_DEFAULT_FLOAT_IMPL"]
+# should be auto, compiler, dcp, rp2040, none
+double_impl = get_define_value("PIO_DEFAULT_DOUBLE_IMPL", "auto")
+# should be auto, compiler, dcp, rp2040, vfp, none
+float_impl = get_define_value("PIO_DEFAULT_FLOAT_IMPL", "auto")
+# should be auto, hardware, compiler
+divider_impl = get_define_value("PIO_DEFAULT_DIVIDER_IMPL", "auto")
+# should be pico, compiler, none
+printf_impl = get_define_value("PIO_DEFAULT_PRINTF_IMPL", "pico")
 if not "PIO_NO_BINARY_INFO" in cpp_defines:
     flags.append(("PICO_BINARY_INFO_ENABLED", 1))
 
 if not "PIO_USE_DEFAULT_PAGE_SIZE" in cpp_defines:
     env.Append(LINKFLAGS=["-Wl,-z,max-page-size=4096"])
 
-timeout = 0
-if "PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS" in cpp_defines:
-    timeout = cpp_defines["PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS"]
+timeout = get_define_value("PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", 0)
 flags.append(("PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS", timeout))
 
 # default to USB stdio if nothing else defined (or explicitly disabled)
-if not any(str(flag).startswith("PIO_STDIO") for flag in cpp_defines) and "PIO_STDIO_NONE" not in cpp_defines:
+# (only the stdio selection flags count, not options like PIO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS)
+stdio_select_flags = ("PIO_STDIO_USB", "PIO_STDIO_UART", "PIO_STDIO_SEMIHOSTING", "PIO_STDIO_RTT", "PIO_STDIO_NONE")
+if not any(flag in cpp_defines for flag in stdio_select_flags):
     print("No stdio implementation defined, defaulting to USB.")
     cpp_defines.append("PIO_STDIO_USB")
 
@@ -433,10 +434,96 @@ def configure_printf_impl():
         new_defines = [d for d in new_defines if not (isinstance(d, tuple) and d[0] == "USBD_MAX_POWER_MA")]
         env.Replace(CPPDEFINES=new_defines)
 
+def compile_gatt_files():
+    """Compile the project's .gatt files to $BUILD_DIR/generated/<name>.h (like pico_btstack_make_gatt_header)."""
+    compile_gatt = join(FRAMEWORK_DIR, "lib", "btstack", "tool", "compile_gatt.py")
+    for gatt_file in Path(env.subst("$PROJECT_SRC_DIR")).rglob("*.gatt"):
+        header_file = Path(genned_dir) / gatt_file.with_suffix(".h").name
+        if header_file.exists() and header_file.stat().st_mtime >= gatt_file.stat().st_mtime:
+            continue
+        action = env.VerboseAction(
+            '"$PYTHONEXE" "%s" "%s" "%s"' % (compile_gatt, str(gatt_file), str(header_file)),
+            "Generating %s" % str(header_file))
+        if env.Execute(action) != 0:
+            sys.stderr.write("Failed to compile GATT file %s\n" % str(gatt_file))
+            env.Exit(1)
+
+def build_btstack():
+    # opt-in BLE support: pico_btstack_ble + pico_btstack_cyw43 in a CMake build.
+    # The project has to provide a btstack_config.h, e.g. in its include/ folder.
+    btstack_dir = join(FRAMEWORK_DIR, "lib", "btstack")
+    env.Append(CPPPATH=[
+        btstack_dir,
+        join(btstack_dir, "3rd-party", "md5"),
+        join(btstack_dir, "3rd-party", "yxml"),
+        join(btstack_dir, "3rd-party", "rijndael"),
+        join(btstack_dir, "3rd-party", "micro-ecc"),
+        join(btstack_dir, "3rd-party", "segger-rtt"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_btstack", "include"),
+    ], CPPDEFINES=[
+        ("ENABLE_BLE", 1),
+        ("CYW43_ENABLE_BLUETOOTH", 1),
+        ("LIB_PICO_BTSTACK_BLE", 1),
+        ("LIB_PICO_BTSTACK_CYW43", 1),
+        ("LIB_PICO_BTSTACK_FLASH_BANK", 1),
+    ])
+    # pico_btstack_base
+    base_src = [
+        "3rd-party/micro-ecc/uECC.c",
+        "3rd-party/rijndael/rijndael.c",
+        "3rd-party/segger-rtt/SEGGER_RTT_printf.c",
+        "platform/embedded/btstack_tlv_flash_bank.c",
+        "platform/embedded/hci_dump_embedded_stdout.c",
+        "platform/embedded/hci_dump_segger_rtt_stdout.c",
+        "src/ad_parser.c", "src/btstack_audio.c", "src/btstack_base64_decoder.c", "src/btstack_crypto.c",
+        "src/btstack_hid.c", "src/btstack_hid_parser.c", "src/btstack_linked_list.c", "src/btstack_memory.c",
+        "src/btstack_memory_pool.c", "src/btstack_resample.c", "src/btstack_ring_buffer.c", "src/btstack_run_loop.c",
+        "src/btstack_run_loop_base.c", "src/btstack_slip.c", "src/btstack_tlv.c", "src/btstack_tlv_none.c",
+        "src/btstack_util.c", "src/hci.c", "src/hci_cmd.c", "src/hci_dump.c", "src/hci_event.c", "src/l2cap.c",
+        "src/l2cap_signaling.c", "3rd-party/md5/md5.c", "3rd-party/yxml/yxml.c",
+    ]
+    # SEGGER_RTT.c is already part of pico_stdio_rtt
+    if "LIB_PICO_STDIO_RTT" not in flags:
+        base_src.append("3rd-party/segger-rtt/SEGGER_RTT.c")
+    # pico_btstack_ble
+    ble_src = [
+        "src/ble/att_db.c", "src/ble/att_db_util.c", "src/ble/att_dispatch.c", "src/ble/att_server.c",
+        "src/ble/gatt-service/battery_service_server.c", "src/ble/gatt-service/battery_service_client.c",
+        "src/ble/gatt-service/cycling_power_service_server.c",
+        "src/ble/gatt-service/cycling_speed_and_cadence_service_server.c",
+        "src/ble/gatt-service/device_information_service_server.c",
+        "src/ble/gatt-service/device_information_service_client.c",
+        "src/ble/gatt-service/heart_rate_service_server.c", "src/ble/gatt-service/hids_device.c",
+        "src/ble/gatt-service/nordic_spp_service_server.c", "src/ble/gatt-service/ublox_spp_service_server.c",
+        "src/ble/gatt-service/ancs_client.c", "src/ble/gatt_client.c", "src/ble/le_device_db_memory.c",
+        "src/ble/le_device_db_tlv.c", "src/ble/sm.c",
+    ]
+    if isfile(join(btstack_dir, "src", "hci_event_builder.c")):
+        ble_src.append("src/hci_event_builder.c")
+    if isfile(join(btstack_dir, "src", "ble", "gatt-service", "hids_host.c")):
+        ble_src += ["src/ble/gatt-service/hids_host.c", "src/ble/gatt_service_client.c"]
+    else:
+        ble_src.append("src/ble/gatt-service/hids_client.c")
+    env.BuildSources(
+        join("$BUILD_DIR", "BTstack"),
+        btstack_dir,
+        "-<*> " + " ".join("+<%s>" % f for f in base_src + ble_src)
+    )
+    # pico_btstack_flash_bank, pico_btstack_run_loop_async_context and btstack_stdin_pico.c (pico_btstack_base)
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKBTstack"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_btstack"),
+        "-<*> +<btstack_flash_bank.c> +<btstack_run_loop_async_context.c> +<btstack_stdin_pico.c>"
+    )
+    compile_gatt_files()
+
 def build_cyw43_arch():
     # not needed for non-CYW43 boards
     if not is_cyw43_board:
         return
+    # -D CYW43_LWIP=0 is what pico_cyw43_arch_none does: WiFi driver without lwIP (e.g. for BLE only)
+    use_lwip = get_define_value("CYW43_LWIP", "1") != "0"
+    use_btstack = "PIO_USE_BTSTACK_BLE" in cpp_defines
     env.Append(CPPPATH=[
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_arch", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_driver", "include"),
@@ -469,10 +556,18 @@ def build_cyw43_arch():
     # build pico_cyw43_driver, has .pio file
     comp_build_dir = join("$BUILD_DIR", "PicoSDKPicoCYW43Driver")
     comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", "pico_cyw43_driver")
-    src_filter = "+<*.c> -<*.S> -<*.s> -<btstack_cyw43.c> -<btstack_hci_transport_cyw43.c>" # only needed if btstack is on
+    src_filter = "+<*.c> -<*.S> -<*.s>"
+    if use_btstack:
+        # cybt_shared_bus: the Bluetooth part of the WiFi chip's bus driver
+        src_filter += " +<cybt_shared_bus/*.c>"
+    else:
+        # pico_btstack_cyw43 / pico_btstack_hci_transport_cyw43, only needed if btstack is on
+        src_filter += " -<btstack_cyw43.c> -<btstack_hci_transport_cyw43.c> -<btstack_chipset_cyw43.c>"
     pio_headers = preprocess_pio_sources(comp_src_dir)
     c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
     env.Depends(c_nodes, pio_headers)
+    if use_btstack:
+        build_btstack()
 
     # build lib/cyw43-driver, regularly.
     env.BuildSources(
@@ -480,6 +575,9 @@ def build_cyw43_arch():
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "src"),
         "+<*> -<*.S> -<*.s> -<cyw43_spi.c>" # already provided by more specialized cyw43_bus_pio_spi.c
     )
+
+    if not use_lwip:
+        return
 
     # build rp2_common / pico_lwip
     env.BuildSources(
@@ -527,7 +625,7 @@ def build_mbedtls():
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls"),
         "-<*> +<pico_mbedtls.c>"
     )
-    if not is_cyw43_board:
+    if not is_cyw43_board or get_define_value("CYW43_LWIP", "1") == "0":
         return
     # pico_lwip_mbedtls: TLS for lwIP's altcp API
     env.Append(CPPPATH=[join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls")])
@@ -715,6 +813,23 @@ if use_pico_malloc:
         "-Wl,--wrap=realloc",
         "-Wl,--wrap=free",
     ])
+
+# printf implementation, like pico_printf / pico_stdio in a CMake build. Default "pico" (pico_printf_pico): the SDK's
+# own printf with float support, output through pico_stdio. "compiler" keeps the C library's printf (newlib-nano, no %f).
+if printf_impl == "pico":
+    default_common_rp2_components.append(("pico_printf", "-<*> +<printf.c>"))
+    env.Append(
+        CPPDEFINES=[("LIB_PICO_PRINTF_PICO", 1)],
+        LINKFLAGS=["-Wl,--wrap=%s" % f for f in (
+            "sprintf", "snprintf", "vsnprintf",                   # pico_printf
+            "printf", "vprintf", "puts", "putchar", "getchar",    # pico_stdio
+        )]
+    )
+elif printf_impl == "compiler":
+    env.Append(CPPDEFINES=[("LIB_PICO_PRINTF_COMPILER", 1)])
+else:
+    sys.stderr.write("Unsupported PIO_DEFAULT_PRINTF_IMPL '%s' (supported: pico, compiler)\n" % printf_impl)
+    env.Exit(-1)
 
 # SDK >= 2.3.0: pico_runtime links pico_thread_local (default implementation: per_thread)
 if isdir(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_thread_local")):

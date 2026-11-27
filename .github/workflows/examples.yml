@@ -22,6 +22,8 @@ jobs:
           - "examples/picosdk-pioasm-blink-auto"
           - "examples/picosdk-wifi-scan"
           - "examples/picosdk-wifi-https"
+          - "examples/picosdk-ble-temp-sensor"
+          - "examples/picosdk-hello-multicore"
           - "examples/mbed-ce-hello-world"
     runs-on: ${{ matrix.os }}
     steps:
