@@ -445,7 +445,11 @@ def build_cyw43_arch():
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "src"),
         join(FRAMEWORK_DIR, "lib", "cyw43-driver", "firmware"),
         join(FRAMEWORK_DIR, "lib", "lwip", "src", "include"),
-        # has lwipopts.h
+        # The project's include/ folder comes first, so that an lwipopts.h (and mbedtls_config.h) from the
+        # project is used for the SDK / lwIP sources too, not only for the project's own sources.
+        # PlatformIO itself only adds it to the environment that builds the project sources.
+        "$PROJECT_INCLUDE_DIR",
+        # fallback lwipopts.h if the project doesn't provide one
         join(FRAMEWORK_DIR, "lib", "btstack", "platform", "lwip", "port")
     ], CPPDEFINES=[
         ("PICO_CYW43_ARCH_THREADSAFE_BACKGROUND", "1"),
@@ -493,11 +497,66 @@ def build_cyw43_arch():
     )
 
 
+def build_mbedtls():
+    # opt-in, like linking pico_mbedtls (and pico_lwip_mbedtls) in a CMake build.
+    # The project has to provide a mbedtls_config.h, e.g. in its include/ folder.
+    if "PIO_USE_MBEDTLS" not in cpp_defines:
+        return
+    mbedtls_dir = join(FRAMEWORK_DIR, "lib", "mbedtls")
+    if isfile(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls", "include", "pico_mbedtls_config.h")):
+        # SDK >= 2.0 with mbedtls 3.x: wrapper that includes the project's mbedtls_config.h
+        mbedtls_config_file = "pico_mbedtls_config.h"
+    else:
+        mbedtls_config_file = "mbedtls_config.h"
+    env.AppendUnique(CPPPATH=[
+        "$PROJECT_INCLUDE_DIR",
+        join(mbedtls_dir, "include"),
+        join(mbedtls_dir, "library"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls", "include"),
+    ])
+    env.Append(CPPDEFINES=[("MBEDTLS_CONFIG_FILE", "\\\"%s\\\"" % mbedtls_config_file)])
+    # pico_mbedtls_crypto + pico_mbedtls_x509 + pico_mbedtls_tls: that's all of library/*.c
+    env.BuildSources(
+        join("$BUILD_DIR", "MbedTLS"),
+        join(mbedtls_dir, "library"),
+        "-<*> +<*.c>"
+    )
+    # pico_mbedtls: hardware entropy, time and (RP2350) SHA-256 acceleration glue
+    env.BuildSources(
+        join("$BUILD_DIR", "PicoSDKMbedTLS"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_mbedtls"),
+        "-<*> +<pico_mbedtls.c>"
+    )
+    if not is_cyw43_board:
+        return
+    # pico_lwip_mbedtls: TLS for lwIP's altcp API
+    env.Append(CPPPATH=[join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls")])
+    env.BuildSources(
+        join("$BUILD_DIR", "LwipAltcpTls"),
+        join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls"),
+        "-<*> +<altcp_tls_mbedtls_mem.c>"
+    )
+    # lwIP's own altcp_tls_mbedtls.c doesn't support mbedtls 3.x, the SDK ships a patched one
+    if isfile(join(FRAMEWORK_DIR, "src", "rp2_common", "pico_lwip", "altcp_tls_mbedtls.c")) \
+            and isfile(join(mbedtls_dir, "library", "ssl_client.c")):
+        env.BuildSources(
+            join("$BUILD_DIR", "PicoSDKLwipMbedTLS"),
+            join(FRAMEWORK_DIR, "src", "rp2_common", "pico_lwip"),
+            "-<*> +<altcp_tls_mbedtls.c>"
+        )
+    else:
+        env.BuildSources(
+            join("$BUILD_DIR", "LwipAltcpTlsMbedTLS"),
+            join(FRAMEWORK_DIR, "lib", "lwip", "src", "apps", "altcp_tls"),
+            "-<*> +<altcp_tls_mbedtls.c>"
+        )
+
 build_double_library()
 build_float_library()
 build_divider_library()
 configure_printf_impl()
 build_cyw43_arch()
+build_mbedtls()
 
 # default false, only mentioned here:
 # PICO_CXX_ENABLE_EXCEPTIONS
