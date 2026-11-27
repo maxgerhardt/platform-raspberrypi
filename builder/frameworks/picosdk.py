@@ -24,6 +24,10 @@ known_mappings: dict[str, str] = {
     "cytron_maker_pi_rp2040": "cytron_maker_pi_rp2040.h",
     "generic_rp2350": "pico2.h",
     "melopero_shake_rp2040": "melopero_shake_rp2040.h",
+    "newsan_archi": "archi.h",
+    "pimoroni_plasma2350w": "pimoroni_plasma2350_w.h",
+    "vccgnd_yd_rp2040": "vcc-gnd_yd-rp2040_16m.h",
+    "weact_rp2350b": "weact_studio_rp2350b_core.h",
     "nullbits_bit_c_pro": "nullbits_bit_c_pro.h",
     "pico": "pico.h",
     "pimoroni_pga2040": "pimoroni_pga2040.h",
@@ -102,9 +106,18 @@ if board.get("build.picosdk.board_header", "") != "":
     print("Using specified Pico-SDK board header: %s" % rp2_board_header)
 else:
     # is there a known mapping for this board?
+    sdk_boards_dir = join(FRAMEWORK_DIR, "src", "boards", "include", "boards")
+    # otherwise, the SDK may have a header with the same name as the board or its variant
+    same_name_header = next((
+        "%s.h" % name for name in (board.id, board.get("build.variant", ""))
+        if name and isfile(join(sdk_boards_dir, "%s.h" % name))
+    ), None)
     if board.id in known_mappings:
         rp2_board_header = known_mappings[board.id]
         print("Using known Pico-SDK board header for %s: %s" % (board.id, rp2_board_header))
+    elif same_name_header:
+        rp2_board_header = same_name_header
+        print("Using Pico-SDK board header for %s: %s" % (board.id, rp2_board_header))
     else:
         # fallback to either pico.h or pico2.h depending on rp2040 or rp2350
         rp2_board_header = "pico2.h" if is_rp2350 else "pico.h"
@@ -218,6 +231,7 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_base", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_boot_lock", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_clocks", "include"),
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_dcp", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_divider", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_dma", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_exception", "include"),
@@ -273,6 +287,9 @@ env.Append(
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_thread_local", "include"), # SDK >= 2.3.0
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_unique_id", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "pico_usb_reset", "include"), # SDK >= 2.3.0
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_rosc", "include"), # SDK >= 2.3.0
+        join(FRAMEWORK_DIR, "src", "rp2_common", "hardware_psram", "include"), # SDK >= 2.3.0, RP2350 only
+        join(FRAMEWORK_DIR, "src", "rp2_common", "pico_low_power", "include"), # SDK >= 2.3.0
         # CMSIS only for ARM
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "include"),
         join(FRAMEWORK_DIR, "src", "rp2_common", "cmsis", "stub", "CMSIS", "Core", "Include"),
@@ -348,14 +365,8 @@ if use_multicore:
     flags.append(("PICO_MULTICORE_ENABLED", 1))
 # pico_malloc wraps malloc/calloc/realloc/free and makes them multicore-safe (mutex), like in a CMake build.
 use_pico_malloc = "PIO_NO_PICO_MALLOC" not in cpp_defines
-# check selected double implementation
-# should be auto, compiler, dcp, rp2040, none
-double_impl = get_define_value("PIO_DEFAULT_DOUBLE_IMPL", "auto")
-# should be auto, compiler, dcp, rp2040, vfp, none
-float_impl = get_define_value("PIO_DEFAULT_FLOAT_IMPL", "auto")
-# should be auto, hardware, compiler
-divider_impl = get_define_value("PIO_DEFAULT_DIVIDER_IMPL", "auto")
-# should be pico, compiler, none
+# float / double / divider / int64_ops / bit_ops / mem_ops implementations: see "runtime support libraries" below
+# printf implementation: pico or compiler
 printf_impl = get_define_value("PIO_DEFAULT_PRINTF_IMPL", "pico")
 if not "PIO_NO_BINARY_INFO" in cpp_defines:
     flags.append(("PICO_BINARY_INFO_ENABLED", 1))
@@ -374,15 +385,6 @@ if not any(flag in cpp_defines for flag in stdio_select_flags):
     cpp_defines.append("PIO_STDIO_USB")
 
 is_cyw43_board = any(str(flag).startswith("PICO_CYW43_SUPPORTED") for flag in cpp_defines)
-
-def build_double_library():
-    pass
-
-def build_float_library():
-    pass
-
-def build_divider_library():
-    pass
 
 # ToDo: this may also be triggered by other functions or configs.
 def build_tinyusb():
@@ -649,9 +651,6 @@ def build_mbedtls():
             "-<*> +<altcp_tls_mbedtls.c>"
         )
 
-build_double_library()
-build_float_library()
-build_divider_library()
 configure_printf_impl()
 build_cyw43_arch()
 build_mbedtls()
@@ -814,6 +813,165 @@ if use_pico_malloc:
         "-Wl,--wrap=free",
     ])
 
+# ---- runtime support libraries, linked by pico_runtime in a CMake build ----
+# Each has an implementation that can be chosen with -D PIO_DEFAULT_<LIB>_IMPL=<impl>, like PICO_DEFAULT_<LIB>_IMPL.
+# "pico" (default) uses the SDK's optimized versions (RP2040 bootrom routines, RP2350 VFP / double coprocessor (DCP),
+# Hazard3 assembly), "compiler" uses the compiler's libgcc / C library versions.
+is_rp2040 = not is_rp2350
+
+def wrap_functions(names):
+    env.Append(LINKFLAGS=["-Wl,--wrap=%s" % n for n in names])
+
+def select_impl(lib, allowed):
+    impl = get_define_value("PIO_DEFAULT_%s_IMPL" % lib.upper(), "pico")
+    if impl == "auto":
+        impl = "pico"
+    if impl not in allowed:
+        sys.stderr.write("Unsupported PIO_DEFAULT_%s_IMPL '%s' for %s (supported: %s)\n" % (
+            lib.upper(), impl, board.get("build.mcu"), ", ".join(allowed)))
+        env.Exit(-1)
+    return impl
+
+def add_runtime_lib(name, src_filter, impl_define=None):
+    default_common_rp2_components.append((name, src_filter))
+    if impl_define:
+        env.Append(CPPDEFINES=[(impl_define, 1)])
+
+float_aeabi_arith = ["__aeabi_fadd", "__aeabi_fdiv", "__aeabi_fmul", "__aeabi_frsub", "__aeabi_fsub"]
+float_aeabi_cmp = ["__aeabi_cfcmpeq", "__aeabi_cfrcmple", "__aeabi_cfcmple", "__aeabi_fcmpeq", "__aeabi_fcmplt",
+                   "__aeabi_fcmple", "__aeabi_fcmpge", "__aeabi_fcmpgt", "__aeabi_fcmpun"]
+float_aeabi_conv32 = ["__aeabi_i2f", "__aeabi_ui2f", "__aeabi_f2iz", "__aeabi_f2uiz"]
+float_aeabi_conv64 = ["__aeabi_l2f", "__aeabi_ul2f", "__aeabi_f2lz", "__aeabi_f2ulz"]
+float_aeabi_conv_double = ["__aeabi_f2d"]
+float_sci = ["cosf", "sinf", "tanf", "atan2f", "expf", "logf", "sincosf"]
+float_sci_extra = ["ldexpf", "copysignf", "truncf", "floorf", "ceilf", "roundf", "asinf", "acosf", "atanf", "sinhf",
+                   "coshf", "tanhf", "asinhf", "acoshf", "atanhf", "exp2f", "log2f", "exp10f", "log10f", "powf",
+                   "powintf", "hypotf", "cbrtf", "fmodf", "dremf", "remainderf", "remquof", "expm1f", "log1pf"]
+float_all = (float_aeabi_arith + float_aeabi_cmp + float_aeabi_conv32 + float_aeabi_conv64 + float_aeabi_conv_double
+             + ["sqrtf"] + float_sci + float_sci_extra + ["fmaf"])
+double_all = [
+    "__aeabi_dadd", "__aeabi_ddiv", "__aeabi_dmul", "__aeabi_drsub", "__aeabi_dsub",
+    "__aeabi_cdcmpeq", "__aeabi_cdrcmple", "__aeabi_cdcmple", "__aeabi_dcmpeq", "__aeabi_dcmplt", "__aeabi_dcmple",
+    "__aeabi_dcmpge", "__aeabi_dcmpgt", "__aeabi_dcmpun",
+    "__aeabi_i2d", "__aeabi_ui2d", "__aeabi_d2iz", "__aeabi_d2uiz",
+    "__aeabi_l2d", "__aeabi_ul2d", "__aeabi_d2lz", "__aeabi_d2ulz", "__aeabi_d2f",
+    "sqrt", "cos", "sin", "tan", "atan2", "exp", "log", "sincos",
+    "ldexp", "copysign", "trunc", "floor", "ceil", "round", "asin", "acos", "atan", "sinh", "cosh", "tanh", "asinh",
+    "acosh", "atanh", "exp2", "log2", "exp10", "log10", "pow", "powint", "hypot", "cbrt", "fmod", "drem",
+    "remainder", "remquo", "expm1", "log1p", "fma",
+]
+
+# pico_float
+if is_riscv:
+    float_impl = select_impl("float", ["pico", "compiler", "none"])
+else:
+    # no "none" on RP2350 Arm: the hard float ABI uses the FPU directly
+    float_impl = select_impl("float", ["pico", "compiler"] + (["none"] if is_rp2040 else []))
+if float_impl == "pico":
+    if is_rp2040:
+        add_runtime_lib("pico_float", "-<*> +<float_aeabi_rp2040.S> +<float_init_rom_rp2040.c> +<float_math.c> "
+                        "+<float_v1_rom_shim_rp2040.S>", "LIB_PICO_FLOAT_PICO")
+        wrap_functions(float_all)
+    elif not is_riscv:
+        # pico_float_pico_vfp: arithmetic, compares, 32-bit conversions, sqrtf and fmaf are VFP instructions
+        add_runtime_lib("pico_float", "-<*> +<float_math.c> +<float_conv32_vfp.S> +<float_common_m33.S> "
+                        "+<float_sci_m33_vfp.S>", "LIB_PICO_FLOAT_PICO")
+        env.Append(CPPDEFINES=[("LIB_PICO_FLOAT_PICO_VFP", 1)], CCFLAGS=["-fno-math-errno"])
+        wrap_functions(float_aeabi_conv64 + float_sci + float_sci_extra)
+    else:
+        # Hazard3: provides the libgcc soft float functions directly, no wrapping
+        add_runtime_lib("pico_float", "-<*> +<float_single_hazard3.S>", "LIB_PICO_FLOAT_PICO")
+elif float_impl == "none":
+    add_runtime_lib("pico_float", "-<*> +<float_none.S>", "LIB_PICO_FLOAT_NONE")
+    wrap_functions(float_all)
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_FLOAT", 1), ("LIB_PICO_FLOAT_COMPILER", 1)])
+
+# pico_double (the SDK has no optimized double implementation for RISC-V, so "pico" means "compiler" there)
+double_impl = select_impl("double", ["pico", "compiler", "none"])
+if double_impl == "pico" and is_riscv:
+    double_impl = "compiler"
+if double_impl == "pico":
+    if is_rp2040:
+        add_runtime_lib("pico_double", "-<*> +<double_aeabi_rp2040.S> +<double_init_rom_rp2040.c> +<double_math.c> "
+                        "+<double_v1_rom_shim_rp2040.S>", "LIB_PICO_DOUBLE_PICO")
+    else:
+        add_runtime_lib("pico_double", "-<*> +<double_math.c> +<double_aeabi_dcp.S> +<double_fma_dcp.S> "
+                        "+<double_sci_m33.S> +<double_conv_m33.S>", "LIB_PICO_DOUBLE_PICO")
+        env.Append(CPPDEFINES=[("LIB_PICO_DOUBLE_PICO_DCP", 1)])
+    wrap_functions(double_all)
+elif double_impl == "none":
+    add_runtime_lib("pico_double", "-<*> +<double_none.S>", "LIB_PICO_DOUBLE_NONE")
+    # printing floats/doubles won't work, so save the space
+    env.Append(CPPDEFINES=[("PICO_PRINTF_SUPPORT_FLOAT", 0)])
+    wrap_functions(double_all)
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_DOUBLE", 1), ("LIB_PICO_DOUBLE_COMPILER", 1)])
+
+# pico_divider (+ hardware_divider): RP2040 has a memory-mapped hardware divider, RP2350 has divide instructions
+divider_impl = select_impl("divider", ["pico", "hardware", "compiler"] if is_rp2040 else ["pico", "compiler"])
+if is_rp2040:
+    add_runtime_lib("hardware_divider", "-<*> +<divider.c>")
+    default_common_rp2_components.append(("hardware_divider", "-<*> +<divider.S>", "_asm"))
+if is_rp2040 and divider_impl in ("pico", "hardware"):
+    add_runtime_lib("pico_divider", "-<*> +<divider_hardware.S>", "LIB_PICO_DIVIDER_HARDWARE")
+    wrap_functions(["__aeabi_idiv", "__aeabi_idivmod", "__aeabi_ldivmod",
+                    "__aeabi_uidiv", "__aeabi_uidivmod", "__aeabi_uldivmod"])
+else:
+    add_runtime_lib("pico_divider", "-<*> +<divider_compiler.c>", "LIB_PICO_DIVIDER_COMPILER")
+
+# pico_int64_ops: RP2040 only
+int64_ops_impl = select_impl("int64_ops", ["pico", "compiler"])
+if is_rp2040 and int64_ops_impl == "pico":
+    add_runtime_lib("pico_int64_ops", "-<*> +<pico_int64_ops_aeabi.S>", "LIB_PICO_INT64_OPS_PICO")
+    wrap_functions(["__aeabi_lmul"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_INT64_OPS", 1), ("LIB_PICO_INT64_OPS_COMPILER", 1)])
+
+# pico_bit_ops
+bit_ops_impl = select_impl("bit_ops", ["pico", "compiler"])
+if bit_ops_impl == "pico":
+    add_runtime_lib("pico_bit_ops", "-<*> +<bit_ops_aeabi.S>", "LIB_PICO_BIT_OPS_PICO")
+    if is_rp2040:
+        wrap_functions(["__clzdi2", "__ctzsi2", "__popcountsi2", "__popcountdi2", "__clz", "__clzl", "__clzsi2",
+                        "__clzll"])
+    wrap_functions(["__ctzdi2"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_BIT_OPS", 1), ("LIB_PICO_BIT_OPS_COMPILER", 1)])
+
+# pico_mem_ops: RP2040 only (bootrom memcpy/memset)
+mem_ops_impl = select_impl("mem_ops", ["pico", "compiler"])
+if is_rp2040 and mem_ops_impl == "pico":
+    add_runtime_lib("pico_mem_ops", "-<*> +<mem_ops_aeabi.S>", "LIB_PICO_MEM_OPS_PICO")
+    wrap_functions(["memcpy", "memset", "__aeabi_memcpy", "__aeabi_memset", "__aeabi_memcpy4", "__aeabi_memset4",
+                    "__aeabi_memcpy8", "__aeabi_memset8"])
+else:
+    env.Append(CPPDEFINES=[("LIB_PICO_MEM_OPS", 1), ("LIB_PICO_MEM_OPS_COMPILER", 1)])
+
+# pico_cxx_options: plain malloc/free based operator new/delete (the builder already compiles C++ with
+# -fno-exceptions -fno-rtti), and pico_platform_common (linked by pico_platform)
+default_common_rp2_components.extend([
+    ("pico_cxx_options", "-<*> +<new_delete.cpp>"),
+    ("pico_platform_common", "+<*>"),
+])
+
+# Libraries that are not linked by default in CMake but were impossible to use here (sources never compiled).
+# Compiling them is harmless: unused functions are removed by --gc-sections.
+default_common_rp2_components.extend([
+    ("hardware_rosc", "+<*>"),
+    ("pico_low_power", "-<*> +<low_power.c>"),
+])
+if is_riscv:
+    # hardware_exception replaces crt0's machine exception handler with its own table on RISC-V.
+    # Only included when requested, as that's a global change.
+    if "PIO_USE_HARDWARE_EXCEPTION" in cpp_defines:
+        default_common_rp2_components.append(("hardware_exception", "+<*>"))
+        env.Append(CPPDEFINES=[("PICO_CRT0_NO_ISR_RISCV_MACHINE_EXCEPTION", 1)])
+else:
+    default_common_rp2_components.append(("hardware_exception", "-<*> +<exception.c>"))
+if is_rp2350:
+    default_common_rp2_components.append(("hardware_psram", "+<*>"))
+
 # printf implementation, like pico_printf / pico_stdio in a CMake build. Default "pico" (pico_printf_pico): the SDK's
 # own printf with float support, output through pico_stdio. "compiler" keeps the C library's printf (newlib-nano, no %f).
 if printf_impl == "pico":
@@ -889,7 +1047,14 @@ default_common_components = [
 # Libraries created with NOFLAG in CMake don't get one.
 # Note: LIB_TINYUSB_DEVICE / LIB_TINYUSB_HOST are deliberately not set; they'd compile pico_stdio_usb out.
 lib_defines_noflag = {"pico_thread_local"}
-lib_defines = [c for c, _ in default_common_rp2_components + default_common_components if c not in lib_defines_noflag]
+# components that don't exist in the installed SDK version (e.g. added in 2.3.0) are skipped
+default_common_rp2_components = [
+    e for e in default_common_rp2_components if isdir(join(FRAMEWORK_DIR, "src", "rp2_common", e[0]))
+]
+lib_defines = []
+for e in default_common_rp2_components + default_common_components:
+    if e[0] not in lib_defines_noflag and e[0] not in lib_defines:
+        lib_defines.append(e[0])
 if not use_multicore:
     # pico_multicore is still compiled (for API compatibility), but the SDK treats the build as single-core.
     lib_defines.remove("pico_multicore")
@@ -907,9 +1072,12 @@ env.BuildSources(
     "-<*> +<*.c>"
 )
 
-for component, src_filter in default_common_rp2_components:
+# entries are (component, src_filter) or (component, src_filter, build_dir_suffix), the latter for components
+# whose sources must go to separate build folders (e.g. divider.S and divider.c would both become divider.o)
+for entry in default_common_rp2_components:
+    component, src_filter = entry[0], entry[1]
     comp_src_dir = join(FRAMEWORK_DIR, "src", "rp2_common", component)
-    comp_build_dir = join("$BUILD_DIR", "PicoSDK%s" % component)
+    comp_build_dir = join("$BUILD_DIR", "PicoSDK%s%s" % (component, entry[2] if len(entry) > 2 else ""))
 
     pio_headers = preprocess_pio_sources(comp_src_dir)
     c_nodes = env.BuildSources(comp_build_dir, comp_src_dir, src_filter)
