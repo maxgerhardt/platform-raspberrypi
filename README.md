@@ -40,7 +40,7 @@ board = ...
 
 ```ini
 [env:development]
-platform = https://github.com/platformio/platform-raspberrypi.git
+platform = https://github.com/maxgerhardt/platform-raspberrypi.git
 board = ...
 ...
 ```
@@ -48,3 +48,5 @@ board = ...
 # Configuration
 
 Please navigate to [documentation](https://docs.platformio.org/page/platforms/raspberrypi.html).
+
+Addtionally see [Arduino-Pico documentation](https://arduino-pico.readthedocs.io/en/latest/platformio.html).
